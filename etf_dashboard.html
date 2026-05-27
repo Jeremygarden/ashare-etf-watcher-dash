@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>中央汇金·国家队ETF三因子监控&资金流向</title>
+<style>
+:root{
+  --bg:#f5f6fa;--card:#fff;--border:#e8ecf2;
+  --text:#1a2233;--sub:#6b7a99;--green:#00b96b;--red:#f5222d;--yellow:#fa8c16;--blue:#1677ff;--purple:#722ed1;
+  --soft:#f5f6fa;--soft-2:#f0f2f5;--soft-3:#fafbfc;
+  --signal-none:#6b7a99;--signal-low:#fa8c16;--signal-mid:#fa8c16;--signal-high:#f5222d;
+}
+body.dark{
+  --bg:#0d1117;--card:#161b22;--border:#30363d;
+  --text:#e6edf3;--sub:#7d8590;
+  --soft:#0f141b;--soft-2:#21262d;--soft-3:#0d1117;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);font-family:-apple-system,"PingFang SC","Helvetica Neue",sans-serif;color:var(--text);min-height:100vh;transition:all .25s}
+body, .topbar, .signal-banner, .kpi-card, .etf-card, .detail-panel, .chart-panel, .matrix-panel, .metric-item, .factor-desc, .time-tag, .sb-opinion, .kpi-badge, .matrix-table th, .matrix-table td, .bar, .legend-dot{transition:all .25s}
+
+/* ── 顶部导航栏 ── */
+.topbar{background:var(--card);border-bottom:1px solid var(--border);padding:0 20px;height:52px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.topbar-left{display:flex;align-items:center;gap:10px}
+.topbar-logo{width:32px;height:32px;background:linear-gradient(135deg,#00b96b,#1677ff);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px}
+.topbar-title{font-size:15px;font-weight:700;color:var(--text)}
+.topbar-sub{font-size:11px;color:var(--sub);margin-top:2px}
+.topbar-indices{display:flex;gap:24px}
+.idx-item{text-align:center}
+.idx-name{font-size:11px;color:var(--sub)}
+.idx-val{font-size:16px;font-weight:700}
+.idx-chg{font-size:12px;font-weight:600}
+.up{color:var(--red)}.dn{color:var(--green)}.flat{color:var(--sub)}
+.topbar-right{display:flex;align-items:center;gap:10px}
+.time-tag{font-size:12px;color:var(--sub);background:var(--soft-2);padding:3px 10px;border-radius:20px}
+.live-dot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:blink 1.5s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+
+.refresh-btn{background:var(--blue);color:#fff;border:none;border-radius:999px;font-size:12px;padding:6px 14px;display:inline-flex;align-items:center;gap:6px;cursor:pointer;transition:all .2s}
+.refresh-btn:hover{opacity:.9}
+.refresh-btn:disabled{cursor:not-allowed;opacity:.7}
+.refresh-icon{display:inline-block}
+.refresh-btn.loading .refresh-icon{animation:spin 1s linear infinite}
+@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+.toast{position:fixed;top:70px;right:20px;background:#fffbe6;border:1px solid #ffe58f;color:#ad6800;padding:8px 12px;border-radius:6px;font-size:12px;box-shadow:0 4px 12px rgba(0,0,0,.1);opacity:0;pointer-events:none;transition:opacity .2s}
+.toast.show{opacity:1}
+
+/* ── 信号Banner ── */
+.signal-banner{margin:16px 20px 0;padding:14px 20px;background:#fff;border-radius:12px;border-left:4px solid var(--signal-none);display:flex;align-items:center;justify-content:space-between;box-shadow:0 1px 4px rgba(0,0,0,.04)}
+.signal-banner.none{border-color:#adb5c8}
+.signal-banner.low{border-color:var(--yellow)}
+.signal-banner.high{border-color:var(--red)}
+.sb-left{display:flex;align-items:flex-start;gap:12px}
+.sb-icon{font-size:22px;line-height:1}
+.sb-title{font-size:15px;font-weight:700;color:var(--text)}
+.sb-desc{font-size:12px;color:var(--sub);margin-top:3px}
+.sb-right{font-size:12px;color:var(--sub);text-align:right}
+.sb-opinion{font-size:11px;color:var(--purple);background:#f9f0ff;padding:2px 8px;border-radius:4px;margin-top:4px;display:inline-block}
+
+/* ── KPI 卡片行 ── */
+.kpi-row{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin:12px 20px 0;padding:0}
+.kpi-card{background:#fff;border-radius:12px;padding:16px;border:1px solid var(--border);position:relative;overflow:hidden}
+.kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.kpi-card.green::before{background:var(--green)}
+.kpi-card.blue::before{background:var(--blue)}
+.kpi-card.yellow::before{background:var(--yellow)}
+.kpi-card.red::before{background:var(--red)}
+.kpi-card.purple::before{background:var(--purple)}
+.kpi-card.gray::before{background:#adb5c8}
+.kpi-label{font-size:11px;color:var(--sub);margin-bottom:6px}
+.kpi-val{font-size:28px;font-weight:800;line-height:1;margin-bottom:4px}
+.kpi-sub{font-size:11px;color:var(--sub)}
+.kpi-badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;margin-top:6px}
+.badge-none{background:#f0f2f5;color:var(--sub)}
+.badge-low{background:#fff7e6;color:var(--yellow)}
+.badge-high{background:#fff1f0;color:var(--red)}
+.kpi-val.none{color:var(--sub)}
+.kpi-val.green{color:var(--green)}
+.kpi-val.red{color:var(--red)}
+.kpi-val.yellow{color:var(--yellow)}
+
+/* ── ETF卡片网格 ── */
+.etf-section{margin:12px 20px 0}
+.etf-grid{display:grid;grid-template-columns:repeat(9,1fr);gap:8px}
+.etf-card{background:#fff;border-radius:10px;padding:14px 10px 10px;border:1px solid var(--border);cursor:pointer;transition:all .15s;text-align:center;position:relative}
+.etf-card:hover{box-shadow:0 4px 16px rgba(0,0,0,.1);transform:translateY(-1px)}
+.etf-card.active{border-color:var(--blue);box-shadow:0 0 0 2px rgba(22,119,255,.15)}
+.etf-card.sig-high{border-color:var(--red);background:#fff8f8}
+.etf-card.sig-low{border-color:var(--yellow);background:#fffbf0}
+.etf-gauge{position:relative;width:64px;height:64px;margin:0 auto 8px}
+.etf-gauge svg{transform:rotate(-90deg)}
+.etf-gauge-text{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700}
+.etf-name{font-size:12px;font-weight:600;color:var(--text);margin-bottom:2px}
+.etf-code{font-size:10px;color:var(--sub);margin-bottom:4px}
+.etf-exchange{display:inline-block;padding:1px 5px;border-radius:3px;font-size:9px;font-weight:600;margin-left:2px}
+.ex-sh{background:#fff1f0;color:#cf1322}
+.ex-sz{background:#e6f4ff;color:#0958d9}
+.ex-chuangye{background:#fff7e6;color:#d46b08}
+.ex-ke{background:#f0f5ff;color:#2f54eb}
+.etf-signal-tag{font-size:10px;color:var(--sub);margin-top:4px;display:flex;align-items:center;justify-content:center;gap:4px}
+.etf-signal-tag.high{color:var(--red)}
+.etf-signal-tag.low{color:var(--yellow)}
+.sig-dot{width:6px;height:6px;border-radius:50%;background:currentColor;display:inline-block}
+
+/* ── 下半部分：三因子详情 + 成交量趋势 ── */
+.bottom-row{display:grid;grid-template-columns:420px 1fr;gap:12px;margin:12px 20px 20px}
+
+/* 三因子详情面板 */
+.detail-panel{background:#fff;border-radius:12px;border:1px solid var(--border);overflow:hidden}
+.dp-header{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.dp-title{font-size:13px;font-weight:700}
+.dp-etf-tag{background:#e6f4ff;color:#0958d9;padding:2px 8px;border-radius:4px;font-size:11px}
+.dp-sync{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.dp-sync-label{font-size:12px;color:var(--sub)}
+.dp-sync-val{font-size:12px;font-weight:700;color:var(--text)}
+.factor-row{padding:12px 16px;border-bottom:1px solid #f5f6fa}
+.factor-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.factor-label{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700}
+.factor-icon{font-size:14px}
+.factor-tag{background:#f5f6fa;color:var(--sub);padding:1px 6px;border-radius:3px;font-size:10px}
+.factor-prob{font-size:16px;font-weight:800}
+.factor-prob.green{color:var(--green)}
+.factor-prob.yellow{color:var(--yellow)}
+.factor-prob.red{color:var(--red)}
+.factor-bar{height:6px;background:#f0f2f5;border-radius:3px;overflow:hidden;margin-bottom:8px}
+.factor-bar-inner{height:100%;border-radius:3px;transition:width .3s}
+.factor-metrics{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.metric-item{background:#f5f6fa;border-radius:6px;padding:8px}
+.metric-label{font-size:10px;color:var(--sub);margin-bottom:2px}
+.metric-val{font-size:13px;font-weight:700}
+.factor-desc{font-size:11px;color:var(--sub);margin-top:6px;padding:6px 8px;background:#f5f6fa;border-radius:6px}
+
+/* 成交量趋势面板 */
+.chart-panel{background:#fff;border-radius:12px;border:1px solid var(--border);overflow:hidden;display:flex;flex-direction:column}
+.cp-header{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.cp-title{font-size:13px;font-weight:700}
+.cp-chart{flex:1;padding:16px;min-height:200px}
+.chart-wrap{position:relative;height:180px}
+.bar-chart{display:flex;align-items:flex-end;gap:4px;height:160px;padding-bottom:0}
+.bar-wrap{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer}
+.bar{border-radius:3px 3px 0 0;width:100%;min-width:8px;transition:all .2s;position:relative}
+.bar.normal{background:#d9e6f7}
+.bar.active{background:var(--green)}
+.bar.signal{background:#ff7875}
+.bar.ma-line{position:absolute}
+.bar-label{font-size:9px;color:var(--sub);white-space:nowrap}
+.bar-tooltip{position:absolute;top:-32px;left:50%;transform:translateX(-50%);background:#1a2233;color:#fff;padding:3px 8px;border-radius:4px;font-size:10px;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .15s;z-index:10}
+.bar-wrap:hover .bar-tooltip{opacity:1}
+.chart-legend{display:flex;gap:16px;padding:8px 16px;border-top:1px solid #f0f2f5;font-size:10px;color:var(--sub)}
+.legend-item{display:flex;align-items:center;gap:4px}
+.legend-dot{width:10px;height:10px;border-radius:2px}
+
+/* 近20日信号矩阵 */
+.matrix-panel{background:#fff;border-radius:12px;border:1px solid var(--border);margin:0 20px 20px;overflow:hidden}
+.mp-header{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.mp-title{font-size:13px;font-weight:700}
+.mp-legend{display:flex;gap:12px;font-size:11px}
+.ml-item{display:flex;align-items:center;gap:4px}
+.ml-dot{width:10px;height:10px;border-radius:50%}
+.matrix-table{width:100%;border-collapse:collapse;font-size:11px}
+.matrix-table th{padding:8px 12px;text-align:left;color:var(--sub);font-weight:600;border-bottom:1px solid #f0f2f5;background:#fafbfc;white-space:nowrap}
+.matrix-table td{padding:8px 12px;border-bottom:1px solid #f5f6fa;vertical-align:middle}
+.matrix-table tr:last-child td{border:none}
+.matrix-table tr:hover td{background:#fafbfc}
+.etf-label{font-weight:600;color:var(--text)}
+.sig-cell{text-align:center}
+.sig-circle{width:26px;height:26px;border-radius:50%;margin:0 auto;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700}
+.sig-none{background:#f0f2f5;color:var(--sub)}
+.sig-low-c{background:#fff7e6;color:var(--yellow)}
+.sig-high-c{background:#fff1f0;color:var(--red)}
+
+@media(max-width:1200px){
+  .etf-grid{grid-template-columns:repeat(5,1fr)}
+  .kpi-row{grid-template-columns:repeat(3,1fr)}
+  .bottom-row{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- ══ 顶部导航栏 ══ -->
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="topbar-logo">📈</div>
+    <div>
+      <div class="topbar-title">中央汇金·国家队ETF三因子监控&资金流向</div>
+      <div class="topbar-sub">量能×50% · 方向×20% · 份额×30% · 中央汇金护盘信号追踪</div>
+    </div>
+  </div>
+  <div class="topbar-indices" id="topbarIndices">
+    <div class="idx-item">
+      <div class="idx-name">沪深300</div>
+      <div class="idx-val" id="hs300Val">--</div>
+      <div class="idx-chg" id="hs300Chg">--</div>
+    </div>
+    <div class="idx-item">
+      <div class="idx-name">上证50</div>
+      <div class="idx-val" id="sz50Val">--</div>
+      <div class="idx-chg" id="sz50Chg">--</div>
+    </div>
+    <div class="idx-item">
+      <div class="idx-name">创业板综</div>
+      <div class="idx-val" id="cybVal">--</div>
+      <div class="idx-chg" id="cybChg">--</div>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <span class="time-tag" id="updateTime">-- 更新</span>
+    <div class="live-dot" id="liveDot"></div>
+    <button class="refresh-btn" id="refreshBtn" onclick="refreshData()">
+      <span class="refresh-icon">🔄</span>
+      <span class="refresh-text">刷新数据</span>
+    </button>
+    <span style="font-size:11px;color:var(--sub)">实时</span>
+  </div>
+</div>
+
+<div class="toast" id="toast">暂无新数据</div>
+
+<!-- ══ 信号Banner ══ -->
+<div class="signal-banner none" id="signalBanner">
+  <div class="sb-left">
+    <div class="sb-icon" id="bannerIcon">🟢</div>
+    <div>
+      <div class="sb-title" id="bannerTitle">当前无明显信号 — 市场观望</div>
+      <div class="sb-desc" id="bannerDesc">份额未见持续增仓，成交量未明显放大，综合概率均值 18%（无信号区间）</div>
+    </div>
+  </div>
+  <div class="sb-right">
+    <div style="font-size:11px;color:var(--sub)">个人A市观点（仅供参考）</div>
+    <div class="sb-opinion" id="bannerOpinion">加载中...</div>
+  </div>
+</div>
+
+<!-- ══ KPI 卡片行 ══ -->
+<div class="kpi-row">
+  <div class="kpi-card gray">
+    <div class="kpi-label">综合信号强度</div>
+    <div class="kpi-val none" id="kpiComposite">--<span style="font-size:14px">%</span></div>
+    <div class="kpi-badge badge-none" id="kpiSignalBadge">无信号</div>
+  </div>
+  <div class="kpi-card red">
+    <div class="kpi-label">高确信 ETF</div>
+    <div class="kpi-val red" id="kpiHigh">--<span style="font-size:14px;color:var(--sub)"> / 7</span></div>
+    <div class="kpi-sub" id="kpiHighDesc">暂无高确信ETF</div>
+  </div>
+  <div class="kpi-card yellow">
+    <div class="kpi-label">中确信 ETF</div>
+    <div class="kpi-val yellow" id="kpiMid">--<span style="font-size:14px;color:var(--sub)"> / 7</span></div>
+    <div class="kpi-sub">观察关注</div>
+  </div>
+  <div class="kpi-card blue">
+    <div class="kpi-label">份额数据覆盖</div>
+    <div class="kpi-val" style="color:var(--blue)" id="kpiShareCov">--<span style="font-size:14px;color:var(--sub)"> / 7</span></div>
+    <div class="kpi-sub" id="kpiShareDesc">全部三因子运行</div>
+  </div>
+  <div class="kpi-card green">
+    <div class="kpi-label">今日大盘</div>
+    <div class="kpi-val" id="kpiMarket">--</div>
+    <div class="kpi-sub" id="kpiMarketDesc">沪深300涨跌幅</div>
+  </div>
+  <div class="kpi-card purple">
+    <div class="kpi-label">全市场净申赎</div>
+    <div class="kpi-val" id="kpiNetFlow">--</div>
+    <div class="kpi-sub" id="kpiNetFlowDesc">7只ETF合计</div>
+  </div>
+</div>
+
+<!-- ══ ETF 卡片网格 ══ -->
+<div class="etf-section">
+  <div class="etf-grid" id="etfGrid">
+    <!-- 动态生成 -->
+  </div>
+</div>
+
+<!-- ══ 下半部分 ══ -->
+<div class="bottom-row">
+
+  <!-- 三因子详情 -->
+  <div class="detail-panel">
+    <div class="dp-header">
+      <div class="dp-title">三因子详情</div>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span style="font-size:10px;background:#e6f4ff;color:#0958d9;padding:2px 6px;border-radius:3px">三因子</span>
+        <span class="dp-etf-tag" id="detailEtfTag">510330 华夏沪深300ETF</span>
+      </div>
+    </div>
+    <!-- 沪深300同步 -->
+    <div class="dp-sync">
+      <div class="dp-sync-label">🔗 沪深300 同步一致性</div>
+      <div class="dp-sync-val" id="syncVal">0 / 4</div>
+    </div>
+    <!-- 量能因子 -->
+    <div class="factor-row">
+      <div class="factor-header">
+        <div class="factor-label">
+          <span class="factor-icon">📊</span>
+          量能概率
+          <span class="factor-tag">×50%</span>
+        </div>
+        <div class="factor-prob green" id="vpVal">--</div>
+      </div>
+      <div class="factor-bar"><div class="factor-bar-inner" id="vpBar" style="width:0;background:var(--green)"></div></div>
+      <div class="factor-metrics">
+        <div class="metric-item">
+          <div class="metric-label">当日成交量</div>
+          <div class="metric-val" id="metricVol">--</div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-label">20日均量</div>
+          <div class="metric-val" id="metricVma">--</div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-label">倍量</div>
+          <div class="metric-val" id="metricVr">--</div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-label">阈值</div>
+          <div class="metric-val">≥2× → 高分</div>
+        </div>
+      </div>
+    </div>
+    <!-- 方向因子 -->
+    <div class="factor-row">
+      <div class="factor-header">
+        <div class="factor-label">
+          <span class="factor-icon">🧭</span>
+          方向概率
+          <span class="factor-tag">×20%</span>
+        </div>
+        <div class="factor-prob yellow" id="dpVal">--</div>
+      </div>
+      <div class="factor-bar"><div class="factor-bar-inner" id="dpBar" style="width:0;background:var(--yellow)"></div></div>
+      <div class="factor-metrics">
+        <div class="metric-item">
+          <div class="metric-label">逆势特征</div>
+          <div class="metric-val" id="metricChg">--</div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-label">超额收益</div>
+          <div class="metric-val" id="metricT5">5日相对指数</div>
+        </div>
+      </div>
+      <div class="factor-desc" id="dpDesc">计算逆市护盘特征：逆跌、超额收益、前期持续下跌</div>
+    </div>
+    <!-- 份额因子 -->
+    <div class="factor-row" style="border:none">
+      <div class="factor-header">
+        <div class="factor-label">
+          <span class="factor-icon">💰</span>
+          份额概率
+          <span class="factor-tag">×30%</span>
+        </div>
+        <div class="factor-prob" id="spVal" style="color:var(--purple)">--</div>
+      </div>
+      <div class="factor-bar"><div class="factor-bar-inner" id="spBar" style="width:0;background:var(--purple)"></div></div>
+      <div class="factor-metrics">
+        <div class="metric-item">
+          <div class="metric-label">当日份额</div>
+          <div class="metric-val" id="metricShares">--</div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-label">份额日变</div>
+          <div class="metric-val" id="metricDelta">--</div>
+        </div>
+      </div>
+      <div class="factor-desc" id="spDesc">一级市场净申购 → 机构主动买入信号</div>
+    </div>
+  </div>
+
+  <!-- 成交量趋势图 -->
+  <div class="chart-panel">
+    <div class="cp-header">
+      <div class="cp-title">近20日成交量趋势</div>
+      <div style="font-size:11px;color:var(--sub)" id="chartEtfLabel">510330 华夏沪深300ETF</div>
+    </div>
+    <div class="cp-chart">
+      <div class="chart-wrap">
+        <div class="bar-chart" id="volChart"></div>
+      </div>
+    </div>
+    <div class="chart-legend">
+      <div class="legend-item"><div class="legend-dot" style="background:#d9e6f7"></div>20日均量线</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div>放量日（>1.5x均量）</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#ff7875"></div>高信号日（CP≥70%）</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══ 近20日信号矩阵 ══ -->
+<div class="matrix-panel">
+  <div class="mp-header">
+    <div class="mp-title">近20日量能信号矩阵（ETF × 交易日）</div>
+    <div class="mp-legend">
+      <div class="ml-item"><div class="ml-dot" style="background:var(--green)"></div>高信号</div>
+      <div class="ml-item"><div class="ml-dot" style="background:var(--yellow)"></div>中信号</div>
+      <div class="ml-item"><div class="ml-dot" style="background:#e8ecf2"></div>无信号</div>
+    </div>
+  </div>
+  <div style="overflow-x:auto">
+    <table class="matrix-table" id="matrixTable">
+      <thead id="matrixHead"></thead>
+      <tbody id="matrixBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+// ══ 数据层 ══
+const ETFS_META = {
+  "510300":{"name":"沪深300华泰","full":"华泰柏瑞沪深300ETF","ex":"sh","exLabel":"沪市","exClass":"ex-sh"},
+  "510310":{"name":"沪深300易方达","full":"易方达沪深300ETF","ex":"sh","exLabel":"沪市","exClass":"ex-sh"},
+  "510330":{"name":"沪深300华夏","full":"华夏沪深300ETF","ex":"sh","exLabel":"沪市","exClass":"ex-sh"},
+  "159919":{"name":"沪深300嘉实","full":"嘉实沪深300ETF","ex":"sz","exLabel":"深市","exClass":"ex-sz"},
+  "510050":{"name":"上证50","full":"华夏上证50ETF","ex":"sh","exLabel":"沪市","exClass":"ex-sh"},
+  "510500":{"name":"中证500","full":"华泰柏瑞中证500ETF","ex":"sh","exLabel":"沪市","exClass":"ex-sh"},
+  "512100":{"name":"中证1000","full":"南方中证1000ETF","ex":"sh","exLabel":"沪市","exClass":"ex-sh"},
+};
+
+// 注入后端数据（由 Python 生成）
+let BACKEND = {"indices": {"hs300": {"price": 4908.17, "chg": -0.8}, "sz50": {"price": 2934.71, "chg": -1.3}, "cyb": {"price": 4045.77, "chg": 0.07}}, "etfs": {"510300": {"date": "2026-05-27", "price": 4.932, "chg": -0.8, "v": 640.52, "vma": 1238.09, "vr": 0.52, "vp": 5.4, "dp": 32.5, "sp": null, "cp": 13.5, "shares_yi": 280.28, "delta_yi": null, "delta_pct": null, "has_shares": false, "klines": [{"date": "2026-04-27", "v": 9280360.0}, {"date": "2026-04-28", "v": 8644202.0}, {"date": "2026-04-29", "v": 12796798.0}, {"date": "2026-04-30", "v": 16517864.0}, {"date": "2026-05-06", "v": 18677828.0}, {"date": "2026-05-07", "v": 20946226.0}, {"date": "2026-05-08", "v": 12535649.0}, {"date": "2026-05-11", "v": 21165218.0}, {"date": "2026-05-12", "v": 10021705.0}, {"date": "2026-05-13", "v": 12726150.0}, {"date": "2026-05-14", "v": 10281646.0}, {"date": "2026-05-15", "v": 10479024.0}, {"date": "2026-05-18", "v": 5835764.0}, {"date": "2026-05-19", "v": 9674999.0}, {"date": "2026-05-20", "v": 9597201.0}, {"date": "2026-05-21", "v": 12055773.0}, {"date": "2026-05-22", "v": 13250518.0}, {"date": "2026-05-25", "v": 16250559.0}, {"date": "2026-05-26", "v": 9686752.0}, {"date": "2026-05-27", "v": 6405215.0}]}, "510310": {"date": "2026-05-27", "price": 4.768, "chg": -0.96, "v": 383.81, "vma": 567.8, "vr": 0.68, "vp": 9.2, "dp": 32.5, "sp": null, "cp": 16.2, "shares_yi": 223.21, "delta_yi": null, "delta_pct": null, "has_shares": false, "klines": [{"date": "2026-04-27", "v": 2968781.0}, {"date": "2026-04-28", "v": 2803130.0}, {"date": "2026-04-29", "v": 4348931.0}, {"date": "2026-04-30", "v": 5504528.0}, {"date": "2026-05-06", "v": 7866968.0}, {"date": "2026-05-07", "v": 5636196.0}, {"date": "2026-05-08", "v": 6137492.0}, {"date": "2026-05-11", "v": 10220831.0}, {"date": "2026-05-12", "v": 7933421.0}, {"date": "2026-05-13", "v": 7581801.0}, {"date": "2026-05-14", "v": 5550889.0}, {"date": "2026-05-15", "v": 2533110.0}, {"date": "2026-05-18", "v": 2744177.0}, {"date": "2026-05-19", "v": 4844389.0}, {"date": "2026-05-20", "v": 3346154.0}, {"date": "2026-05-21", "v": 6618139.0}, {"date": "2026-05-22", "v": 6162236.0}, {"date": "2026-05-25", "v": 11450963.0}, {"date": "2026-05-26", "v": 7878508.0}, {"date": "2026-05-27", "v": 3838069.0}]}, "510330": {"date": "2026-05-27", "price": 5.125, "chg": -1.08, "v": 351.97, "vma": 339.04, "vr": 1.04, "vp": 19.3, "dp": 32.5, "sp": null, "cp": 23.3, "shares_yi": 146.52, "delta_yi": null, "delta_pct": null, "has_shares": false, "klines": [{"date": "2026-04-27", "v": 2248341.0}, {"date": "2026-04-28", "v": 1404433.0}, {"date": "2026-04-29", "v": 1652964.0}, {"date": "2026-04-30", "v": 2735970.0}, {"date": "2026-05-06", "v": 5437208.0}, {"date": "2026-05-07", "v": 3959015.0}, {"date": "2026-05-08", "v": 3599957.0}, {"date": "2026-05-11", "v": 5753022.0}, {"date": "2026-05-12", "v": 4337576.0}, {"date": "2026-05-13", "v": 4425466.0}, {"date": "2026-05-14", "v": 1245878.0}, {"date": "2026-05-15", "v": 1766415.0}, {"date": "2026-05-18", "v": 1062438.0}, {"date": "2026-05-19", "v": 1979061.0}, {"date": "2026-05-20", "v": 1804842.0}, {"date": "2026-05-21", "v": 4059056.0}, {"date": "2026-05-22", "v": 3743061.0}, {"date": "2026-05-25", "v": 11926270.0}, {"date": "2026-05-26", "v": 3464638.0}, {"date": "2026-05-27", "v": 3519662.0}]}, "159919": {"date": "2026-05-27", "price": 5.148, "chg": -0.56, "v": 460.85, "vma": 476.15, "vr": 0.97, "vp": 16.2, "dp": 32.5, "sp": null, "cp": 21.1, "shares_yi": 130.03, "delta_yi": null, "delta_pct": null, "has_shares": false, "klines": [{"date": "2026-04-27", "v": 2807482.0}, {"date": "2026-04-28", "v": 3602617.0}, {"date": "2026-04-29", "v": 4605082.0}, {"date": "2026-04-30", "v": 6399770.0}, {"date": "2026-05-06", "v": 7608896.0}, {"date": "2026-05-07", "v": 3802454.0}, {"date": "2026-05-08", "v": 5568445.0}, {"date": "2026-05-11", "v": 8404600.0}, {"date": "2026-05-12", "v": 4500571.0}, {"date": "2026-05-13", "v": 6361254.0}, {"date": "2026-05-14", "v": 3998954.0}, {"date": "2026-05-15", "v": 2656069.0}, {"date": "2026-05-18", "v": 1746825.0}, {"date": "2026-05-19", "v": 4385464.0}, {"date": "2026-05-20", "v": 4402631.0}, {"date": "2026-05-21", "v": 5788533.0}, {"date": "2026-05-22", "v": 3251272.0}, {"date": "2026-05-25", "v": 9966894.0}, {"date": "2026-05-26", "v": 2755042.0}, {"date": "2026-05-27", "v": 4608464.0}]}, "510050": {"date": "2026-05-27", "price": 3.008, "chg": -1.25, "v": 981.67, "vma": 1314.78, "vr": 0.75, "vp": 10.9, "dp": 32.5, "sp": null, "cp": 17.4, "shares_yi": 95.91, "delta_yi": null, "delta_pct": null, "has_shares": false, "klines": [{"date": "2026-04-27", "v": 10157245.0}, {"date": "2026-04-28", "v": 12383674.0}, {"date": "2026-04-29", "v": 12870056.0}, {"date": "2026-04-30", "v": 17512075.0}, {"date": "2026-05-06", "v": 18737284.0}, {"date": "2026-05-07", "v": 16135513.0}, {"date": "2026-05-08", "v": 18079093.0}, {"date": "2026-05-11", "v": 17761779.0}, {"date": "2026-05-12", "v": 11788729.0}, {"date": "2026-05-13", "v": 13770469.0}, {"date": "2026-05-14", "v": 10422841.0}, {"date": "2026-05-15", "v": 11090662.0}, {"date": "2026-05-18", "v": 8709846.0}, {"date": "2026-05-19", "v": 16453482.0}, {"date": "2026-05-20", "v": 12820188.0}, {"date": "2026-05-21", "v": 9552675.0}, {"date": "2026-05-22", "v": 12521537.0}, {"date": "2026-05-25", "v": 13538492.0}, {"date": "2026-05-26", "v": 8749755.0}, {"date": "2026-05-27", "v": 9816737.0}]}, "510500": {"date": "2026-05-27", "price": 8.614, "chg": -1.58, "v": 330.24, "vma": 724.56, "vr": 0.46, "vp": 4.6, "dp": 32.5, "sp": null, "cp": 13.0, "shares_yi": 43.58, "delta_yi": null, "delta_pct": null, "has_shares": false, "klines": [{"date": "2026-04-27", "v": 6275188.0}, {"date": "2026-04-28", "v": 6369387.0}, {"date": "2026-04-29", "v": 8789675.0}, {"date": "2026-04-30", "v": 7793619.0}, {"date": "2026-05-06", "v": 10254482.0}, {"date": "2026-05-07", "v": 12291601.0}, {"date": "2026-05-08", "v": 11110986.0}, {"date": "2026-05-11", "v": 6608744.0}, {"date": "2026-05-12", "v": 5103981.0}, {"date": "2026-05-13", "v": 5154451.0}, {"date": "2026-05-14", "v": 8902588.0}, {"date": "2026-05-15", "v": 13136592.0}, {"date": "2026-05-18", "v": 4808791.0}, {"date": "2026-05-19", "v": 7097897.0}, {"date": "2026-05-20", "v": 5067923.0}, {"date": "2026-05-21", "v": 5345049.0}, {"date": "2026-05-22", "v": 7929375.0}, {"date": "2026-05-25", "v": 6085135.0}, {"date": "2026-05-26", "v": 2414019.0}, {"date": "2026-05-27", "v": 3302420.0}]}, "512100": {"date": "2026-05-27", "price": 3.437, "chg": -1.77, "v": 712.3, "vma": 943.62, "vr": 0.75, "vp": 11.1, "dp": 32.5, "sp": null, "cp": 17.5, "shares_yi": 31.13, "delta_yi": null, "delta_pct": null, "has_shares": false, "klines": [{"date": "2026-04-27", "v": 11843603.0}, {"date": "2026-04-28", "v": 10473004.0}, {"date": "2026-04-29", "v": 16925825.0}, {"date": "2026-04-30", "v": 17847549.0}, {"date": "2026-05-06", "v": 13643136.0}, {"date": "2026-05-07", "v": 6443625.0}, {"date": "2026-05-08", "v": 8588784.0}, {"date": "2026-05-11", "v": 10080201.0}, {"date": "2026-05-12", "v": 5263474.0}, {"date": "2026-05-13", "v": 4866506.0}, {"date": "2026-05-14", "v": 6280729.0}, {"date": "2026-05-15", "v": 10989460.0}, {"date": "2026-05-18", "v": 6770396.0}, {"date": "2026-05-19", "v": 6463303.0}, {"date": "2026-05-20", "v": 6676468.0}, {"date": "2026-05-21", "v": 10142679.0}, {"date": "2026-05-22", "v": 10245746.0}, {"date": "2026-05-25", "v": 8761878.0}, {"date": "2026-05-26", "v": 5126266.0}, {"date": "2026-05-27", "v": 7122995.0}]}}};
+
+let selectedCode = "510330";
+
+// ══ 工具函数 ══
+function colorOf(cp){
+  if(cp>=70) return "var(--red)";
+  if(cp>=50) return "var(--yellow)";
+  return "var(--sub)";
+}
+function sigClass(cp){
+  if(cp>=70) return "sig-high-c";
+  if(cp>=50) return "sig-low-c";
+  return "sig-none";
+}
+function chgColor(v){ return v>0?"var(--red)":v<0?"var(--green)":"var(--sub)"; }
+function chgSign(v){ return v>0?"+":""; }
+function fmtChg(v){ return `${chgSign(v)}${v.toFixed(2)}%`; }
+
+// ══ 渲染指数 ══
+function renderIndices(){
+  const idx = BACKEND.indices || {};
+  const items = [
+    {id:"hs300",key:"hs300"},
+    {id:"sz50", key:"sz50"},
+    {id:"cyb",  key:"cyb"},
+  ];
+  items.forEach(({id,key})=>{
+    const d = idx[key]||{};
+    const valEl  = document.getElementById(`${id}Val`);
+    const chgEl  = document.getElementById(`${id}Chg`);
+    if(valEl && d.price){ valEl.textContent = d.price.toFixed(2); }
+    if(chgEl && d.chg !== undefined){
+      chgEl.textContent = fmtChg(d.chg);
+      chgEl.className = `idx-chg ${d.chg>0?"up":d.chg<0?"dn":"flat"}`;
+    }
+  });
+}
+
+// ══ 渲染KPI ══
+function renderKPI(){
+  const etfs = BACKEND.etfs || {};
+  const codes = Object.keys(etfs);
+  if(!codes.length) return;
+
+  const cpAvg = codes.reduce((s,c)=>s+(etfs[c].cp||0),0)/codes.length;
+  const highList = codes.filter(c=>etfs[c].cp>=70);
+  const midList  = codes.filter(c=>etfs[c].cp>=50&&etfs[c].cp<70);
+  const shCov    = codes.filter(c=>etfs[c].has_shares).length;
+
+  // 综合信号强度
+  document.getElementById("kpiComposite").innerHTML =
+    `${cpAvg.toFixed(0)}<span style="font-size:14px">%</span>`;
+  const badge = document.getElementById("kpiSignalBadge");
+  if(cpAvg>=70){badge.textContent="🔴 高确信";badge.className="kpi-badge badge-high";}
+  else if(cpAvg>=50){badge.textContent="🟡 中等关注";badge.className="kpi-badge badge-low";}
+  else{badge.textContent="⚪ 无信号";badge.className="kpi-badge badge-none";}
+
+  document.getElementById("kpiHigh").innerHTML =
+    `${highList.length}<span style="font-size:14px;color:var(--sub)"> / 7</span>`;
+  document.getElementById("kpiHighDesc").textContent =
+    highList.length ? highList.map(c=>ETFS_META[c]?.name||c).join("、") : "暂无高确信ETF";
+
+  document.getElementById("kpiMid").innerHTML =
+    `${midList.length}<span style="font-size:14px;color:var(--sub)"> / 7</span>`;
+
+  document.getElementById("kpiShareCov").innerHTML =
+    `${shCov}<span style="font-size:14px;color:var(--sub)"> / 7</span>`;
+  document.getElementById("kpiShareDesc").textContent =
+    shCov===7?"全部三因子运行":`${7-shCov}只退化为二因子`;
+
+  const hs300Chg = (BACKEND.indices?.hs300?.chg)||0;
+  const mktEl = document.getElementById("kpiMarket");
+  mktEl.textContent = fmtChg(hs300Chg);
+  mktEl.style.color = chgColor(hs300Chg);
+  document.getElementById("kpiMarketDesc").textContent =
+    hs300Chg<-0.5?"下行 →护盘需求↑":"沪深300涨跌幅";
+
+  // 净申赎
+  let netBuy=0, netSell=0, netTotal=0;
+  let buyCount=0, sellCount=0;
+  codes.forEach(c=>{
+    const d = etfs[c].delta_yi;
+    if(d!==null && d!==undefined){
+      if(d>0){netBuy+=d;buyCount++;}else{netSell+=Math.abs(d);sellCount++;}
+      netTotal+=d;
+    }
+  });
+  const nfEl = document.getElementById("kpiNetFlow");
+  if(netTotal!==0){
+    nfEl.textContent = (netTotal>0?"+":"")+netTotal.toFixed(1)+"亿份";
+    nfEl.style.color = netTotal>0?"var(--red)":"var(--green)";
+    document.getElementById("kpiNetFlowDesc").textContent =
+      `${buyCount}只净申购/${sellCount}只净赎回`;
+  } else {
+    nfEl.textContent = "N/A";
+    nfEl.style.color = "var(--sub)";
+    document.getElementById("kpiNetFlowDesc").textContent = "历史数据积累中";
+  }
+
+  // Banner
+  const banner = document.getElementById("signalBanner");
+  const now = new Date();
+  const timeStr = `${now.getFullYear()}.${now.getMonth()+1}.${now.getDate()}`;
+  document.getElementById("bannerOpinion").textContent = `市场观察 ${timeStr}`;
+  if(highList.length>=2){
+    banner.className="signal-banner high";
+    document.getElementById("bannerIcon").textContent="🔴";
+    document.getElementById("bannerTitle").textContent=`高确信信号 — ${highList.length}只ETF同步放量`;
+    document.getElementById("bannerDesc").textContent=
+      `${highList.map(c=>ETFS_META[c]?.name||c).join("、")}触发高确信信号，综合概率超过70%，关注护盘动向`;
+  } else if(highList.length+midList.length>=2){
+    banner.className="signal-banner low";
+    document.getElementById("bannerIcon").textContent="🟡";
+    document.getElementById("bannerTitle").textContent="中等信号 — 局部关注";
+    document.getElementById("bannerDesc").textContent=
+      `${highList.length}只高确信，${midList.length}只中等关注，建议持续追踪`;
+  } else {
+    banner.className="signal-banner none";
+    document.getElementById("bannerIcon").textContent="🟢";
+    document.getElementById("bannerTitle").textContent="当前无明显信号 — 市场观望";
+    document.getElementById("bannerDesc").textContent=
+      `份额未见持续增仓，成交量未明显放大，综合概率均值 ${cpAvg.toFixed(0)}%（无信号区间）`;
+  }
+}
+
+// ══ 渲染ETF仪表盘卡片 ══
+function renderETFGrid(){
+  const grid = document.getElementById("etfGrid");
+  const etfs = BACKEND.etfs||{};
+  grid.innerHTML = Object.entries(ETFS_META).map(([code,meta])=>{
+    const d = etfs[code]||{cp:0};
+    const cp = d.cp||0;
+    const cardClass = cp>=70?"etf-card sig-high":cp>=50?"etf-card sig-low":"etf-card";
+    const sigLabel = cp>=70?"高确信 ①":cp>=50?"低确信 ①":"无信号 ①";
+    const sigTagClass = cp>=70?"etf-signal-tag high":cp>=50?"etf-signal-tag low":"etf-signal-tag";
+    const color = colorOf(cp);
+    // SVG仪表盘
+    const r=28, circ=2*Math.PI*r;
+    const dash = circ*(cp/100);
+    const gColor = cp>=70?"#f5222d":cp>=50?"#fa8c16":"#adb5c8";
+    return `
+    <div class="${cardClass}${code===selectedCode?" active":""}" onclick="selectEtf('${code}')">
+      <div class="etf-gauge">
+        <svg width="64" height="64" viewBox="0 0 64 64">
+          <circle cx="32" cy="32" r="${r}" fill="none" stroke="#f0f2f5" stroke-width="5"/>
+          <circle cx="32" cy="32" r="${r}" fill="none" stroke="${gColor}" stroke-width="5"
+            stroke-dasharray="${dash} ${circ}" stroke-linecap="round"/>
+        </svg>
+        <div class="etf-gauge-text" style="color:${color}">${cp.toFixed(0)}%</div>
+      </div>
+      <div class="etf-name">${meta.name}</div>
+      <div class="etf-code">
+        ${code}
+        <span class="etf-exchange ${meta.exClass}">${meta.exLabel}</span>
+      </div>
+      <div class="${sigTagClass}">
+        <span class="sig-dot"></span>${sigLabel}
+      </div>
+    </div>`;
+  }).join("");
+}
+
+// ══ 渲染三因子详情 ══
+function renderDetail(code){
+  const etfs = BACKEND.etfs||{};
+  const d = etfs[code];
+  if(!d) return;
+  const meta = ETFS_META[code]||{};
+  document.getElementById("detailEtfTag").textContent = `${code} ${meta.full||""}`;
+  document.getElementById("chartEtfLabel").textContent = `${code} ${meta.full||""}`;
+
+  // 沪深300同步
+  const hs300Codes = ["510300","510310","510330","159919"];
+  const syncCount = hs300Codes.filter(c=>(etfs[c]?.cp||0)>=50).length;
+  document.getElementById("syncVal").textContent = `${syncCount} / 4`;
+
+  // 量能
+  const vp = d.vp||0;
+  document.getElementById("vpVal").textContent = `${vp.toFixed(0)}%`;
+  document.getElementById("vpBar").style.width = `${Math.min(vp,100)}%`;
+  document.getElementById("metricVol").textContent = `${(d.v||0).toFixed(1)}亿`;
+  document.getElementById("metricVma").textContent = `${(d.vma||0).toFixed(1)}亿`;
+  document.getElementById("metricVr").textContent  = `${(d.vr||0).toFixed(2)}×`;
+
+  // 方向
+  const dp = d.dp||0;
+  document.getElementById("dpVal").textContent = `${dp.toFixed(0)}%`;
+  document.getElementById("dpBar").style.width = `${Math.min(dp,100)}%`;
+  document.getElementById("metricChg").textContent = fmtChg(d.chg||0);
+  const dpDescEl = document.getElementById("dpDesc");
+  const chg = d.chg||0;
+  dpDescEl.textContent = chg<-0.5?"指数下跌环境，ETF逆势护盘特征检测":
+    chg>0.5?"指数上涨，护盘折扣系数已启用":"震荡行情，护盘特征中性";
+
+  // 份额
+  const sp = d.sp;
+  const spEl = document.getElementById("spVal");
+  const spBar = document.getElementById("spBar");
+  if(sp!==null && sp!==undefined){
+    spEl.textContent=`${sp.toFixed(0)}%`;
+    spBar.style.width=`${Math.min(sp,100)}%`;
+    document.getElementById("metricShares").textContent=`${(d.shares_yi||0).toFixed(1)}亿份`;
+    const dyi = d.delta_yi;
+    const dpct = d.delta_pct;
+    if(dyi!==null&&dyi!==undefined){
+      const sign = dyi>0?"↑":"↓";
+      document.getElementById("metricDelta").textContent=
+        `${sign}${Math.abs(dyi).toFixed(2)}亿份 (${dpct>0?"+":""}${(dpct||0).toFixed(2)}%)`;
+      document.getElementById("spDesc").textContent=
+        dyi>0?`净申购 +${dyi.toFixed(2)}亿份，一级市场主动买入信号`:
+        `净赎回 ${dyi.toFixed(2)}亿份，机构减仓中`;
+    }
+  } else {
+    spEl.textContent="N/A";
+    spBar.style.width="0";
+    document.getElementById("metricShares").textContent=`${(d.shares_yi||0).toFixed(1)}亿份`;
+    document.getElementById("metricDelta").textContent="历史积累中";
+    document.getElementById("spDesc").textContent="历史份额数据积累中，明日起可计算日变化";
+  }
+}
+
+// ══ 渲染成交量柱状图 ══
+function renderVolChart(code){
+  const etfs = BACKEND.etfs||{};
+  const d = etfs[code];
+  if(!d) return;
+  const chart = document.getElementById("volChart");
+  // 使用近20日K线数据（已在后端存入 klines 字段）
+  const klines = d.klines||[];
+  if(!klines.length){
+    chart.innerHTML='<div style="width:100%;text-align:center;color:var(--sub);padding:40px 0;font-size:12px">K线数据加载中...</div>';
+    return;
+  }
+  const vols = klines.map(k=>k.v/10000);
+  const maxVol = Math.max(...vols);
+  const maVol = d.vma||1;
+  chart.innerHTML = klines.map((k,i)=>{
+    const v = k.v/10000;
+    const h = Math.round((v/maxVol)*140);
+    const isSignal = (d.cp||0)>=70 && i===klines.length-1;
+    const isActive = v/maVol >= 1.5;
+    const cls = isSignal?"bar signal":isActive?"bar active":"bar normal";
+    const daysAgo = klines.length-1-i;
+    const lbl = daysAgo===0?"D-1":`D-${daysAgo+1}`;
+    return `<div class="bar-wrap">
+      <div class="${cls}" style="height:${h}px">
+        <div class="bar-tooltip">${k.date}<br>${v.toFixed(0)}万手</div>
+      </div>
+      <div class="bar-label">${lbl}</div>
+    </div>`;
+  }).join("");
+}
+
+// ══ 渲染信号矩阵 ══
+function renderMatrix(){
+  const etfs = BACKEND.etfs||{};
+  const codes = Object.keys(ETFS_META);
+  // 取最近交易日列表（从任意ETF的klines提取）
+  const anyCode = codes.find(c=>etfs[c]?.klines?.length);
+  const dates = anyCode ? etfs[anyCode].klines.slice(-10).map(k=>k.date) : [];
+
+  const thead = document.getElementById("matrixHead");
+  const tbody = document.getElementById("matrixBody");
+  thead.innerHTML = `<tr>
+    <th style="min-width:120px">ETF</th>
+    ${dates.map(d=>`<th>${d.slice(5)}</th>`).join("")}
+    <th>今日</th>
+  </tr>`;
+
+  tbody.innerHTML = codes.map(code=>{
+    const meta = ETFS_META[code]||{};
+    const d = etfs[code]||{};
+    const cp = d.cp||0;
+    // 模拟历史信号格（用 cp 做当日，历史格用随机但合理的数值展示）
+    const cells = dates.slice(0,-1).map(date=>{
+      // 随机模拟（实际应从DB取历史数据）
+      const fakeCP = 0; // 无历史数据时为0
+      return `<td class="sig-cell">
+        <div class="${sigClass(fakeCP)} sig-circle">-</div>
+      </td>`;
+    });
+    return `<tr>
+      <td>
+        <div class="etf-label">${meta.name||code}</div>
+        <div style="font-size:10px;color:var(--sub)">${code} <span class="etf-exchange ${meta.exClass||''}">${meta.exLabel||''}</span></div>
+      </td>
+      ${cells.join("")}
+      <td class="sig-cell">
+        <div class="${sigClass(cp)} sig-circle" style="font-size:9px">${cp.toFixed(0)}%</div>
+      </td>
+    </tr>`;
+  }).join("");
+}
+
+// ══ 选中ETF ══
+function selectEtf(code){
+  selectedCode = code;
+  // 更新卡片选中状态
+  document.querySelectorAll(".etf-card").forEach((el,i)=>{
+    const c = Object.keys(ETFS_META)[i];
+    el.classList.toggle("active", c===code);
+  });
+  renderDetail(code);
+  renderVolChart(code);
+}
+
+// ══ 更新时间 ══
+function updateTime(){
+  const now = new Date();
+  const hh = String(now.getUTCHours()+8).padStart(2,"0");
+  const mm = String(now.getUTCMinutes()).padStart(2,"0");
+  document.getElementById("updateTime").textContent = `${now.getMonth()+1}/${now.getDate()} ${hh}:${mm} 更新`;
+}
+
+function showToast(message){
+  const el = document.getElementById("toast");
+  if(!el) return;
+  el.textContent = message;
+  el.classList.add("show");
+  clearTimeout(window.__toastTimer);
+  window.__toastTimer = setTimeout(()=>el.classList.remove("show"), 3000);
+}
+
+function setRefreshLoading(loading){
+  const btn = document.getElementById("refreshBtn");
+  if(!btn) return;
+  const textEl = btn.querySelector(".refresh-text");
+  btn.disabled = loading;
+  btn.classList.toggle("loading", loading);
+  if(textEl){ textEl.textContent = loading ? "加载中..." : "刷新数据"; }
+}
+
+async function refreshData(){
+  setRefreshLoading(true);
+  try{
+    const res = await fetch('/etf_data.json?t=' + Date.now());
+    if(!res.ok) throw new Error('no data');
+    const data = await res.json();
+    if(!data || !data.etfs) throw new Error('invalid');
+    BACKEND = data;
+    init();
+  }catch(e){
+    showToast('暂无新数据');
+  }finally{
+    setRefreshLoading(false);
+  }
+}
+
+// ══ 初始化 ══
+function init(){
+  updateTime();
+  renderIndices();
+  renderKPI();
+  renderETFGrid();
+  renderDetail(selectedCode);
+  renderVolChart(selectedCode);
+  renderMatrix();
+}
+
+init();
+setInterval(refreshData, 30*60*1000);
+</script>
+</body>
+</html>
