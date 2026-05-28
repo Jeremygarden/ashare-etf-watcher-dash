@@ -80,19 +80,32 @@ def backfill(n=240):
             if "None of" not in str(e):  # 非交易日报错正常
                 print(f"SSE err: {str(e)[:30]}", end=" ")
         
-        # 深交所 ETF（批量获取较慢，只在缺失时请求）
+        # 深交所 ETF — 带 retry（最多3次）
         if szse_codes and not all(c in day_data for c in szse_codes):
-            try:
-                df_sz = ak.fund_scale_daily_szse(start_date=dt, end_date=dt, symbol='ETF')
-                if df_sz is not None and len(df_sz) > 0:
-                    for code in szse_codes:
-                        rows = df_sz[df_sz['基金代码'] == code]
-                        if len(rows) > 0:
-                            shares_yi = round(float(rows['基金份额'].values[0]) / 1e8, 4)
-                            day_data[code] = {"shares_yi": shares_yi, "ts": date_key + "T19:00:00"}
-            except Exception as e:
-                if "Connection" not in str(e):
-                    print(f"SZSE err: {str(e)[:30]}", end=" ")
+            szse_ok = False
+            for _attempt in range(3):
+                try:
+                    import time
+                    if _attempt > 0:
+                        time.sleep(2 * _attempt)  # 递增等待
+                    df_sz = ak.fund_scale_daily_szse(start_date=dt, end_date=dt, symbol='ETF')
+                    if df_sz is not None and len(df_sz) > 0:
+                        for code in szse_codes:
+                            rows = df_sz[df_sz['基金代码'] == code]
+                            if len(rows) > 0:
+                                shares_yi = round(float(rows['基金份额'].values[0]) / 1e8, 4)
+                                day_data[code] = {"shares_yi": shares_yi, "ts": date_key + "T19:00:00"}
+                        szse_ok = True
+                        break
+                except Exception as e:
+                    err_str = str(e)
+                    if "Connection" in err_str or "Reset" in err_str or "peer" in err_str:
+                        continue  # 连接问题，重试
+                    elif "None of" in err_str:
+                        break  # 非交易日，不重试
+                    else:
+                        if _attempt == 2:
+                            print(f"SZSE err: {err_str[:40]}", end=" ")
         
         if day_data:
             history[date_key] = day_data

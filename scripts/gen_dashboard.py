@@ -59,7 +59,38 @@ def generate():
     for code, info in etf.ETFS.items():
         print(f"     {code} {info['n'][:10]}...", end=" ")
         klines = etf.fetch(code, 240)
-        sh     = etf.fetch_fund_shares_realtime(code)
+        # 实时份额：东方财富（双入口 fallback）
+        sh = etf.fetch_fund_shares_realtime(code)
+        # 如果实时接口失败，尝试从 akshare 获取（当日 or 最近交易日）
+        if sh is None:
+            try:
+                import akshare as ak
+                secid = etf._EM_SECID.get(code,'')
+                is_szse = code.startswith('159')
+                today8 = datetime.now().strftime('%Y%m%d')
+                if is_szse:
+                    df_fb = ak.fund_scale_daily_szse(start_date=today8, end_date=today8, symbol='ETF')
+                    if df_fb is not None and len(df_fb) > 0:
+                        rows = df_fb[df_fb['基金代码']==code]
+                        if len(rows)>0:
+                            shares_yi = round(float(rows['基金份额'].values[0])/1e8, 4)
+                            sh = {"shares_yi": shares_yi, "price": 0}
+                else:
+                    df_fb = ak.fund_etf_scale_sse(date=today8)
+                    if df_fb is not None and '基金代码' in df_fb.columns:
+                        rows = df_fb[df_fb['基金代码']==code]
+                        if len(rows)>0:
+                            shares_yi = round(float(rows['基金份额'].values[0])/1e8, 4)
+                            sh = {"shares_yi": shares_yi, "price": 0}
+            except Exception:
+                pass
+        # 最终 fallback：使用历史最近一日的份额
+        if sh is None:
+            _share_dates2 = sorted(shares_history.keys())
+            for _d in reversed(_share_dates2):
+                if code in shares_history.get(_d, {}):
+                    sh = {"shares_yi": shares_history[_d][code].get("shares_yi",0), "price": 0, "_from_history": True}
+                    break
 
         if not klines or len(klines) < 22:
             print("⚠️ K线不足")
