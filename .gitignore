@@ -6,3 +6,5 @@ etf_data.json
 .env
 *.json
 !package.json
+.vercel
+
