@@ -133,7 +133,7 @@ body{background:var(--bg);font-family:'PingFang SC','Microsoft YaHei',sans-serif
 <!-- Header -->
 <div class="header">
   <div class="header-left">
-    <span class="ver-badge">V3.0 PRO</span>
+    <span class="ver-badge">V3.0 PRO</span><span id="dataSourceBadge" style="font-size:10px;background:#e0f2fe;color:#0369a1;padding:2px 8px;border-radius:8px;margin-left:8px">模拟数据</span>
     <span class="update-time" id="updateTime">数据更新于 2026/05/15</span>
   </div>
   <div class="header-title">
@@ -435,11 +435,12 @@ function calcMarketCoef(sh3, upRatio, northFlow){
 // Previous day zt count for badge delta calculation (updated after each fetch)
 let prevDayZtCount = 0;
 
-function calcSentiment(ztCount, avgTurnover, mainNetFlow){
-  const a = normalize(ztCount, 0, 150);
-  const b = normalize(avgTurnover, 0, 5);
-  const c = normalize(mainNetFlow, -3000, 3000);
-  return Math.round(a * 0.4 + b * 0.3 + c * 0.3);
+function calcSentiment(ztCount, zbRate, shChg){
+  // 标定公式（与历史脚本一致）：涨停数55% + 封板率30% + 指数涨跌15%
+  const a = normalize(ztCount, 0, 120);          // 涨停数 [0-120] → [0-100]
+  const b = normalize(100 - zbRate, 20, 90);     // 封板率（炸板率反向）
+  const c = normalize(shChg, -2, 2);             // 指数当日涨跌
+  return Math.round(a * 0.55 + b * 0.30 + c * 0.15);
 }
 function calcWeakMoney(zbRate, upRatio, mainNetYi){
   const a = normalize(zbRate, 0, 60);
@@ -908,7 +909,7 @@ async function fetchAllData(){
 
     const market = calcMarketCoef(sh3, upRatio, northFlow);
     const sentiment = calcSentiment(ztCount, avgTurnover, mainNetFlow);
-    const weak = calcWeakMoney(zbRate, upRatio, mainNetFlow);
+    const weak = calcWeakMoney(zbRate, sh3);
     const threeLine = calcThreeLine(market, sentiment, weak);
     const composite = calcComposite(market, sentiment, weak, threeLine);
 
@@ -951,49 +952,74 @@ window.addEventListener('DOMContentLoaded', () => {
   // Init SVG arcs
   updateGauge(29);
 
-  // Generate history
-  historyData = generateHistory(60);
+  // 优先加载真实历史数据，失败时用随机模拟
+  async function loadHistoryData() {
+    try {
+      const r = await fetch('sentiment_history.json?t=' + Date.now());
+      if (!r.ok) throw new Error('no file');
+      const d = await r.json();
+      if (d.history && d.history.length > 0) {
+        historyData = d.history.map(h => ({
+          date:       h.date,
+          market:     h.market,
+          sentiment:  h.sentiment,
+          weak:       h.weak,
+          threeLine:  h.three_line,
+          composite:  h.composite,
+        }));
+        console.log(`[历史数据] 加载真实历史 ${historyData.length} 天`);
+        const badge = document.getElementById('dataSourceBadge');
+        if (badge) badge.textContent = '真实历史数据';
+      } else {
+        throw new Error('empty');
+      }
+    } catch(e) {
+      console.log('[历史数据] 使用模拟数据:', e.message);
+      historyData = generateHistory(60);
+    }
 
-  // Update ice tag
-  const iceSignalCount = historyData.filter(d => d.composite < 20).length;
-  document.getElementById('iceTag').textContent = `冰点信号 ${iceSignalCount} 次`;
-  document.getElementById('iceTag').style.display = 'inline-block';
-  document.getElementById('iceRunning').textContent = `${iceSignalCount}/10`;
+    // Update ice tag
+    const iceSignalCount = historyData.filter(d => d.composite < 20).length;
+    document.getElementById('iceTag').textContent = `冰点信号 ${iceSignalCount} 次`;
+    document.getElementById('iceTag').style.display = 'inline-block';
+    document.getElementById('iceRunning').textContent = `${iceSignalCount}/10`;
 
-  // Update stat date
-  if(historyData.length > 0){
-    document.getElementById('statLatestDate').textContent = historyData[historyData.length-1].date;
+    // Update stat date
+    if(historyData.length > 0){
+      document.getElementById('statLatestDate').textContent = historyData[historyData.length-1].date;
+    }
+
+    // 5d changes
+    if(historyData.length >= 5){
+      const cur = historyData[historyData.length-1].composite;
+      const prev5 = historyData[historyData.length-6]?.composite || cur;
+      const emo5d = cur - prev5;
+      document.getElementById('emo5dChange').textContent = (emo5d >= 0 ? '+' : '') + emo5d.toFixed(1);
+      document.getElementById('emo5dChange').style.color = emo5d >= 0 ? 'var(--green)' : 'var(--red)';
+    }
+
+    // 1d change for compositeDayChange badge
+    if(historyData.length >= 2){
+      const cur1d = historyData[historyData.length-1].composite;
+      const prev1d = historyData[historyData.length-2].composite;
+      const dayDiff = cur1d - prev1d;
+      const el = document.getElementById('compositeDayChange');
+      el.textContent = (dayDiff >= 0 ? '+' : '') + dayDiff.toFixed(1);
+      el.style.color = dayDiff >= 0 ? 'var(--red)' : 'var(--green)';
+    }
+
+    // Init with defaults
+    initDefault();
+
+    // Init chart
+    initChart();
+    // Sync stat cards with initial history
+    updateChartStats(currentRange);
+
+    // Fetch real data async
+    fetchAllData();
   }
-
-  // 5d changes
-  if(historyData.length >= 5){
-    const cur = historyData[historyData.length-1].composite;
-    const prev5 = historyData[historyData.length-6]?.composite || cur;
-    const emo5d = cur - prev5;
-    document.getElementById('emo5dChange').textContent = (emo5d >= 0 ? '+' : '') + emo5d.toFixed(1);
-    document.getElementById('emo5dChange').style.color = emo5d >= 0 ? 'var(--green)' : 'var(--red)';
-  }
-
-  // 1d change for compositeDayChange badge
-  if(historyData.length >= 2){
-    const cur1d = historyData[historyData.length-1].composite;
-    const prev1d = historyData[historyData.length-2].composite;
-    const dayDiff = cur1d - prev1d;
-    const el = document.getElementById('compositeDayChange');
-    el.textContent = (dayDiff >= 0 ? '+' : '') + dayDiff.toFixed(1);
-    el.style.color = dayDiff >= 0 ? 'var(--red)' : 'var(--green)';
-  }
-
-  // Init with defaults
-  initDefault();
-
-  // Init chart
-  initChart();
-  // Sync stat cards with initial history
-  updateChartStats(currentRange);
-
-  // Fetch real data async
-  fetchAllData();
+  loadHistoryData();
 
   // Date input update
   document.getElementById('tradeDateInput').addEventListener('change', function(){
