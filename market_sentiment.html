@@ -62,7 +62,7 @@ body{background:var(--bg);font-family:'PingFang SC','Microsoft YaHei',sans-serif
 
 /* Card: 炸板率 */
 .zbrate-main{font-size:28px;font-weight:700;color:var(--orange);margin:8px 0 4px;line-height:1}
-.zbrate-warn{background:#fef3c7;border-radius:8px;padding:8px 10px;margin:8px 0;font-size:11px;color:#92400e;line-height:1.5}
+.zbrate-warn{background:#fef3c7;border-left:3px solid #f59e0b;border-radius:8px;padding:8px 10px;margin:8px 0;font-size:11px;color:#92400e;line-height:1.5}
 
 /* Row 2 */
 .row2{display:grid;grid-template-columns:repeat(5,1fr) 1.4fr;gap:12px;margin-bottom:16px}
@@ -70,9 +70,9 @@ body{background:var(--bg);font-family:'PingFang SC','Microsoft YaHei',sans-serif
 .metric-change{font-size:13px;font-weight:600;margin-bottom:4px}
 .metric-sub{font-size:11px;color:#94a3b8}
 .vs-tag{background:#1e3a5f;color:#60a5fa;font-size:11px;padding:2px 8px;border-radius:6px;margin-top:4px;display:inline-block}
-.advice-card{background:#f0f9ff;border-radius:12px;padding:16px;display:flex;flex-direction:column;justify-content:center}
-.advice-title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:8px}
-.advice-text{font-size:15px;font-weight:600;color:var(--text);line-height:1.5}
+.advice-card{background:#1e293b;border-radius:12px;padding:16px;display:flex;flex-direction:column;justify-content:center}
+.advice-title{font-size:13px;font-weight:700;color:#94a3b8;margin-bottom:8px}
+.advice-text{font-size:15px;font-weight:600;color:#ffffff;line-height:1.5}
 .advice-sub{font-size:11px;color:var(--sub);margin-top:4px}
 
 /* Row 3: Chart */
@@ -229,7 +229,7 @@ body{background:var(--bg);font-family:'PingFang SC','Microsoft YaHei',sans-serif
     <div class="zt-main" id="ztMainDisplay">54 / 38 / 15</div>
     <a class="link-text">查看详情 →</a>
     <div class="fb-rate">
-      封板率 <strong id="fbRate2">58.7%</strong> &nbsp; 净股比 <strong id="netRatio">3.60</strong>
+      封板率 <strong id="fbRate2">58.7%</strong> &nbsp; 净股比 <strong id="netRatio">3.60</strong> &nbsp; 炸板率 <strong id="zbRateMini" style="color:var(--orange)">41.3%</strong>
     </div>
     <div class="stat-row" style="margin-top:4px">
       <span>净流量 偏强</span>
@@ -238,7 +238,7 @@ body{background:var(--bg);font-family:'PingFang SC','Microsoft YaHei',sans-serif
   </div>
 
   <!-- Card 4: 炸板率 -->
-  <div class="card" style="border-top:3px solid var(--orange)">
+  <div class="card" style="border-top:3px solid var(--orange);background:#fffbeb">
     <div class="card-title">
       炸板率
       <span class="info-icon">ℹ<span class="tooltip">炸板率 = 炸板数 / (涨停+炸板) × 100%，越高说明市场情绪越弱</span></span>
@@ -334,11 +334,11 @@ body{background:var(--bg);font-family:'PingFang SC','Microsoft YaHei',sans-serif
         <div class="legend-item"><div class="legend-dot" style="background:#3b82f640;border:1px solid #3b82f6"></div><span>冰点区0-20</span></div>
       </div>
       <div class="tab-group" id="chartTabs">
-        <button class="tab-btn active" onclick="showChartLine('all')">全部</button>
-        <button class="tab-btn" onclick="showChartLine('market')">大盘系数</button>
-        <button class="tab-btn" onclick="showChartLine('sentiment')">超短情绪</button>
-        <button class="tab-btn" onclick="showChartLine('weak')">弱钱效应</button>
-        <button class="tab-btn" onclick="showChartLine('composite')">综合指数</button>
+        <button class="tab-btn active" onclick="showChartLine('all', event)">全部</button>
+        <button class="tab-btn" onclick="showChartLine('market', event)">大盘系数</button>
+        <button class="tab-btn" onclick="showChartLine('sentiment', event)">超短情绪</button>
+        <button class="tab-btn" onclick="showChartLine('weak', event)">弱钱效应</button>
+        <button class="tab-btn" onclick="showChartLine('composite', event)">综合指数</button>
       </div>
     </div>
   </div>
@@ -392,6 +392,7 @@ body{background:var(--bg);font-family:'PingFang SC','Microsoft YaHei',sans-serif
     <div class="op-framework">
       <div class="op-framework-title">📋 今日操作框架</div>
       <div class="op-framework-text" id="opFramework">主防守：回避高位追涨，关注低吸 + 回封确认</div>
+      <div class="op-framework-text" style="font-size:12px;color:var(--sub);margin-top:-4px;margin-bottom:6px" id="opDefense">防守方向：优先持仓强势板块，回避弱势补涨</div>
       <div class="tag-group">
         <span class="tag tag-orange">⚠ 风险</span>
         <span class="tag tag-blue">结合防守</span>
@@ -430,6 +431,9 @@ function calcMarketCoef(sh3, upRatio, northFlow){
   const c = normalize(northFlow, -100, 100);
   return Math.round(a * 0.4 + b * 0.3 + c * 0.3);
 }
+// Previous day zt count for badge delta calculation (updated after each fetch)
+let prevDayZtCount = 0;
+
 function calcSentiment(ztCount, avgTurnover, mainNetFlow){
   const a = normalize(ztCount, 0, 150);
   const b = normalize(avgTurnover, 0, 5);
@@ -457,18 +461,18 @@ function getRating(zbRate, netRatio) {
   const ztLabel = netRatio>=5?'极强':netRatio>=3?'偏强':netRatio>=1.5?'中性':'偏弱';
   const ztColor = netRatio>=5?'#dc2626':netRatio>=3?'#16a34a':netRatio>=1.5?'#ca8a04':'#94a3b8';
   const flowLabel = zbRate<=20?'偏强':zbRate<=35?'中性':'偏弱';
-  const zbWarn = zbRate>40?'炸合防守：结合防守，等回封确认（开盘价+0.1%/收盘价+0.4%）':
-                 zbRate>25?'炸板率偏高，追板需等回封，建议收盘价附近参与':
+  const zbWarn = zbRate>35?'炸合防守：结合防守，等回封确认（开盘价+0.1%/收盘价+0.4%）':
+                 zbRate>=20?'炸板率偏高，追板需等回封，建议收盘价附近参与':
                  '封板质量良好，可以参与强势涨停';
   return {fbLabel,fbColor,ztLabel,ztColor,flowLabel,zbWarn};
 }
 function getSignalStrength(composite){
-  if(composite >= 80) return 10;
-  if(composite >= 70) return 8;
+  if(composite >= 80) return 9;
+  if(composite >= 75) return 8;
   if(composite >= 60) return 7;
   if(composite >= 50) return 6;
   if(composite >= 40) return 5;
-  if(composite >= 30) return 4;
+  if(composite >= 35) return 4;
   if(composite >= 20) return 3;
   return 2;
 }
@@ -477,14 +481,14 @@ function getEmotionLabel(composite){
   if(composite >= 65) return {text:'偏热', color:'#f97316', bg:'#ffedd5'};
   if(composite >= 45) return {text:'震荡中性', color:'#eab308', bg:'#fef9c3'};
   if(composite >= 25) return {text:'情绪冰点', color:'#3b82f6', bg:'#dbeafe'};
-  return {text:'极度悲观', color:'#1e40af', bg:'#dbeafe'};
+  return {text:'极度悲观', color:'#1d4ed8', bg:'#dbeafe'};
 }
 function getAdvice(composite, weakMoney, zbRate){
-  if(composite >= 80) return '市场极度贪婪，注意风险，建议减仓观望';
-  if(composite >= 65) return '市场偏热，谨慎追涨，关注板块轮动';
-  if(composite >= 45) return '市场震荡中性，均衡配置，跟随主线';
-  if(composite >= 25) return '情绪冰点，优先观察低位核心修复';
-  return '极度悲观，关注反弹机会，分批低吸';
+  if(composite > 80)  return '极度贪婪，随时减仓';
+  if(composite >= 65) return '市场偏热，顺势而为';
+  if(composite >= 45) return '震荡中性，选择性参与';
+  if(composite >= 25) return '震荡行情，结合防守，等回封确认';
+  return '情绪冰点，优先观察低位核心修复';
 }
 
 // ============ 历史数据生成 ============
@@ -631,6 +635,17 @@ function initChart(){
   });
 }
 
+function updateChartStats(range){
+  const slice = historyData.slice(-range);
+  if(slice.length === 0) return;
+  const last = slice[slice.length - 1];
+  document.getElementById('statLatestDate').textContent = last.date;
+  document.getElementById('statThreeLine').textContent = last.threeLine;
+  const vsVal = last.sentiment > 0 ? (last.market / last.sentiment).toFixed(1) : '—';
+  document.getElementById('statVS').textContent = vsVal;
+  document.getElementById('statComposite').textContent = last.composite;
+}
+
 function setRange(days){
   currentRange = days;
   document.querySelectorAll('.range-btn').forEach(b => b.classList.remove('active'));
@@ -640,11 +655,13 @@ function setRange(days){
     emotionChart.options.scales.x.ticks.maxTicksLimit = Math.min(days, 15);
     emotionChart.update();
   }
+  updateChartStats(days);
 }
 
-function showChartLine(type){
+function showChartLine(type, evt){
   document.querySelectorAll('#chartTabs .tab-btn').forEach(b => b.classList.remove('active'));
-  event.target.classList.add('active');
+  const btn = evt ? evt.target : document.querySelector(`#chartTabs .tab-btn[onclick*="'${type}'"]`);
+  if(btn) btn.classList.add('active');
   if(type === 'all'){
     activeLines = {market:true, sentiment:true, weak:true, composite:true};
   } else {
@@ -694,11 +711,41 @@ function updateUI(data){
   document.getElementById('fbRate2').textContent = fbRate.toFixed(1) + '%';
   document.getElementById('fbRateDisplay').textContent = fbRate.toFixed(1) + '%';
   document.getElementById('ztMainDisplay').textContent = `${ztCount} / ${zbCount} / ${dtCount}`;
+  const zbRateMiniEl = document.getElementById('zbRateMini');
+  if(zbRateMiniEl) zbRateMiniEl.textContent = zbRate.toFixed(1) + '%';
+
+  // Net ratio
+  const netRatioVal = ztCount / Math.max(dtCount, 1);
+  document.getElementById('netRatio').textContent = netRatioVal.toFixed(2);
+
+  // getRating: update label colors and warn text
+  const rating = getRating(zbRate, netRatioVal);
+  const strongBadge = document.querySelector('#ztMainDisplay').parentElement.querySelector('.strong-badge');
+  if(strongBadge){
+    strongBadge.textContent = rating.fbLabel;
+    strongBadge.style.background = rating.fbColor + '22';
+    strongBadge.style.color = rating.fbColor;
+  }
+  const zbWarnEl = document.querySelector('.zbrate-warn');
+  if(zbWarnEl) zbWarnEl.textContent = '⚠️ ' + rating.zbWarn;
+
+  // ztBadge: dynamic delta vs previous day
+  const prevZt = (typeof prevDayZtCount !== 'undefined' && prevDayZtCount > 0) ? prevDayZtCount : null;
+  const ztBadgeEl = document.getElementById('ztBadge');
+  if(prevZt !== null){
+    const delta = ztCount - prevZt;
+    ztBadgeEl.textContent = (delta >= 0 ? '+' : '') + delta;
+  } else {
+    ztBadgeEl.textContent = '--';
+  }
 
   // Trade signal
   document.getElementById('tradeSignal').textContent = `强度${str}`;
 
-  // Chart stats
+  // Chart stats - update with today's real data
+  const now2 = new Date();
+  const todayLabel = String(now2.getMonth()+1).padStart(2,'0') + '/' + String(now2.getDate()).padStart(2,'0');
+  document.getElementById('statLatestDate').textContent = todayLabel;
   document.getElementById('statThreeLine').textContent = threeLine;
   document.getElementById('statVS').textContent = vsVal;
   document.getElementById('statComposite').textContent = composite;
@@ -708,8 +755,9 @@ function updateUI(data){
 
   // Risk items
   const risks = [];
-  if(weak > 60) risks.push(`弱钱效应偏高(${weak})，优先降仓含不足追涨`);
-  if(zbRate > 35) risks.push(`炸板率${zbRate}%处于高位，属于环境较弱`);
+  if(weak > 60) risks.push(`弱钱效应偏高(${weak})，优先降仓，不足追涨`);
+  if(zbRate > 35) risks.push(`炸板率${zbRate}%处于高位，追板风险大，建议回封确认`);
+  else if(zbRate >= 20) risks.push(`炸板率${zbRate}%偏高，追板需等回封`);
   if(composite < 25) risks.push('综合情绪处于冰点，建议观望为主');
 
   ['riskItem1','riskItem2','riskItem3'].forEach((id,i) => {
@@ -731,12 +779,16 @@ function updateUI(data){
   // Operation framework
   if(composite < 25){
     document.getElementById('opFramework').textContent = '主防守：回避高位追涨，关注低吸 + 回封确认';
+    document.getElementById('opDefense').textContent = '防守方向：观望为主，等情绪企稳再布局';
   } else if(composite < 45){
     document.getElementById('opFramework').textContent = '谨慎参与：优选低吸机会，控制仓位比例';
+    document.getElementById('opDefense').textContent = '防守方向：优先持仓强势板块，回避弱势补涨';
   } else if(composite < 65){
     document.getElementById('opFramework').textContent = '均衡操作：跟随主线，控制个股仓位';
+    document.getElementById('opDefense').textContent = '防守方向：保持核心仓位，适度参与主线轮动';
   } else {
     document.getElementById('opFramework').textContent = '积极但谨慎：减少追高，关注回调机会';
+    document.getElementById('opDefense').textContent = '防守方向：顺势操作，注意高位风险及时止盈';
   }
 
   // Update time
@@ -839,11 +891,11 @@ function initDefault(){
   updateUI({market, sentiment, weak, threeLine, composite, zbRate, ztCount, zbCount, dtCount, fbRate});
 }
 
-// Compute ice days from history
+// Compute ice days from history (threshold = 20, matching chart ice zone 0-20)
 function computeIceDays(history){
   let count = 0;
   for(let i = history.length-1; i >= 0; i--){
-    if(history[i].composite < 25) count++;
+    if(history[i].composite < 20) count++;
     else break;
   }
   return count;
@@ -880,11 +932,23 @@ window.addEventListener('DOMContentLoaded', () => {
     document.getElementById('emo5dChange').style.color = emo5d >= 0 ? 'var(--green)' : 'var(--red)';
   }
 
+  // 1d change for compositeDayChange badge
+  if(historyData.length >= 2){
+    const cur1d = historyData[historyData.length-1].composite;
+    const prev1d = historyData[historyData.length-2].composite;
+    const dayDiff = cur1d - prev1d;
+    const el = document.getElementById('compositeDayChange');
+    el.textContent = (dayDiff >= 0 ? '+' : '') + dayDiff.toFixed(1);
+    el.style.color = dayDiff >= 0 ? 'var(--red)' : 'var(--green)';
+  }
+
   // Init with defaults
   initDefault();
 
   // Init chart
   initChart();
+  // Sync stat cards with initial history
+  updateChartStats(currentRange);
 
   // Fetch real data async
   fetchAllData();
