@@ -149,10 +149,6 @@ body.dark .shares-title-row{background:rgba(0,0,0,.15)}
 .period-btn{padding:3px 9px;border-radius:4px;font-size:11px;border:1px solid rgba(56,189,248,.2);background:rgba(255,255,255,.05);color:#7dd3fc;cursor:pointer;transition:all .15s}
 .period-btn:hover{background:rgba(56,189,248,.12);border-color:#38bdf8}
 .period-btn.active{background:linear-gradient(135deg,#0ea5e9,#38bdf8);color:#fff;border-color:transparent;font-weight:600}
-.shares-apply-btn{padding:4px 14px;border-radius:4px;font-size:11px;font-weight:600;background:linear-gradient(135deg,#0ea5e9,#38bdf8);color:#fff;border:none;cursor:pointer;transition:all .2s}
-.shares-apply-btn:hover{opacity:.9}
-.shares-update-btn{padding:4px 12px;border-radius:4px;font-size:11px;font-weight:600;background:rgba(255,255,255,.07);color:#7dd3fc;border:1px solid rgba(56,189,248,.25);cursor:pointer;margin-left:auto;transition:all .2s}
-.shares-update-btn:hover{background:rgba(56,189,248,.12)}
 .shares-title-row{padding:10px 16px 4px;display:flex;align-items:center;justify-content:space-between}
 .shares-title{font-size:14px;font-weight:700;color:#e6edf3}
 .shares-legend{display:flex;gap:14px;font-size:11px;align-items:center}
@@ -401,11 +397,11 @@ html,body{overflow-x:hidden;max-width:100vw}
   <div class="shares-toolbar">
     <div class="shares-date-group">
       <span class="shares-date-label">开始日期</span>
-      <input type="date" class="shares-date-input" id="sharesStartDate">
+      <input type="date" class="shares-date-input" id="sharesStartDate" onchange="autoApplyDateRange()">
     </div>
     <div class="shares-date-group">
       <span class="shares-date-label">结束日期</span>
-      <input type="date" class="shares-date-input" id="sharesEndDate">
+      <input type="date" class="shares-date-input" id="sharesEndDate" onchange="autoApplyDateRange()">
     </div>
     <div class="shares-period-sep"></div>
     <div class="period-btns">
@@ -418,8 +414,6 @@ html,body{overflow-x:hidden;max-width:100vw}
       <button class="period-btn active" data-period="240" onclick="setPeriod(240)">近240日</button>
       <button class="period-btn" data-period="9999" onclick="setPeriod(9999)">全部</button>
     </div>
-    <button class="shares-apply-btn" onclick="applyDateRange()">应用</button>
-    <button class="shares-update-btn" onclick="refreshData()">更新数据</button>
   </div>
   <!-- 图表标题 + 图例 -->
   <div class="shares-title-row">
@@ -1002,7 +996,7 @@ function initDatePickers() {
   if (endEl)   endEl.value   = fmt(today);
 }
 
-function applyDateRange() {
+function autoApplyDateRange() {
   const s = document.getElementById('sharesStartDate')?.value;
   const e = document.getElementById('sharesEndDate')?.value;
   if (s && e) {
@@ -1089,7 +1083,7 @@ function renderSharesChart(code) {
   if (!n) {
     ctx2.fillStyle = isDark ? '#5a7a9a' : '#8896ab';
     ctx2.font = '13px sans-serif'; ctx2.textAlign = 'center';
-    ctx2.fillText('暂无数据，请点击"更新数据"', W/2, H/2);
+    ctx2.fillText('暂无数据，请点击顶部"🔄 刷新数据"', W/2, H/2);
     return;
   }
 
