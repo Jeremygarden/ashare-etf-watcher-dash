@@ -195,8 +195,8 @@ body.dark .shares-title-row{background:rgba(0,0,0,.15)}
 .chart-panel{background:var(--card);border-radius:12px;border:1px solid var(--border);overflow:hidden}
 .cp-header{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
 .cp-title{font-size:13px;font-weight:700}
-.cp-chart{padding:12px 16px 0;height:auto}
-.chart-wrap{position:relative;height:120px}
+.cp-chart{padding:4px 16px 0;height:auto}
+.chart-wrap{position:relative;height:100px}
 .bar-chart{display:flex;align-items:flex-end;gap:4px;height:160px;padding-bottom:0}
 .bar-wrap{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer}
 .bar{border-radius:3px 3px 0 0;width:100%;min-width:8px;transition:all .2s;position:relative}
@@ -532,11 +532,11 @@ html,body{overflow-x:hidden;max-width:100vw}
       <div class="factor-bar"><div class="factor-bar-inner" id="dpBar" style="width:0;background:var(--yellow)"></div></div>
       <div class="factor-metrics">
         <div class="metric-item">
-          <div class="metric-label">逆势特征</div>
+          <div class="metric-label" title="当日ETF涨跌幅。正值=上涨，负值=下跌。大盘跌时ETF涨/横=逆势护盘信号↑">逆势特征 ℹ️</div>
           <div class="metric-val" id="metricChg">--</div>
         </div>
         <div class="metric-item">
-          <div class="metric-label">超额收益</div>
+          <div class="metric-label" title="ETF近5日涨幅 - 沪深300近5日涨幅。正值=ETF相对抗跌，说明有资金在背后托">超额收益 ℹ️</div>
           <div class="metric-val" id="metricT5">5日相对指数</div>
         </div>
       </div>
@@ -567,6 +567,8 @@ html,body{overflow-x:hidden;max-width:100vw}
     </div>
   </div>
 
+  <!-- 右侧列：成交量趋势 + 市场情绪 placeholder -->
+  <div style="display:flex;flex-direction:column;gap:12px;min-width:0">
   <!-- 成交量趋势图 -->
   <div class="chart-panel">
     <div class="cp-header">
@@ -578,17 +580,27 @@ html,body{overflow-x:hidden;max-width:100vw}
       </div>
       <div style="font-size:11px;color:var(--sub)" id="chartEtfLabel">510330 华夏沪深300ETF</div>
     </div>
+    <!-- 图例移到图表区域内左上角，不占独立行 -->
+    <div style="padding:6px 16px 0;display:flex;gap:12px;font-size:10px;color:var(--sub)">
+      <div class="legend-item"><div class="legend-dot" style="background:#d9e6f7"></div>20日均量</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div>放量日</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#ff7875"></div>高信号日</div>
+    </div>
     <div class="cp-chart">
       <div class="chart-wrap">
         <div class="bar-chart" id="volChart"></div>
       </div>
     </div>
-    <div class="chart-legend">
-      <div class="legend-item"><div class="legend-dot" style="background:#d9e6f7"></div>20日均量线</div>
-      <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div>放量日（>1.5x均量）</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#ff7875"></div>高信号日（CP≥70%）</div>
-    </div>
   </div>
+
+  <!-- 市场情绪 Placeholder -->
+  <div style="background:var(--card);border-radius:12px;border:1px solid var(--border);padding:16px;flex:1;min-height:120px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:8px">
+    <div style="font-size:24px">🌡️</div>
+    <div style="font-size:13px;font-weight:700;color:var(--text)">市场情绪</div>
+    <div style="font-size:11px;color:var(--sub);text-align:center">恐贪指数 · 资金情绪 · 大单净流入<br><span style="color:var(--blue);margin-top:4px;display:inline-block">即将上线</span></div>
+  </div>
+
+  </div><!-- end 右侧列 -->
 
 </div>
 
