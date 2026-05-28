@@ -4,7 +4,7 @@ ETF国家队监控看板生成器 v1.0
 生成包含实时数据的独立 HTML 看板（etf_dashboard.html）
 用法: python3 gen_dashboard.py
 """
-import json, ssl, urllib.request, os, sys
+import json, ssl, urllib.request, os, sys, re
 from datetime import datetime
 
 _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -52,13 +52,13 @@ def generate():
     # 2. ETF数据（K线+份额）
     print("  📈 获取ETF行情+份额...")
     shares_history = etf.load_shares_history()
-    idx_300_data   = etf.fetch("sh000300", 60)     # 复用主脚本 fetch（加前缀兼容）
-    idx_300_data   = etf.fetch("000300", 60)
+    idx_300_data   = etf.fetch("sh000300", 240)     # 复用主脚本 fetch（加前缀兼容）
+    idx_300_data   = etf.fetch("000300", 240)
 
     etf_results = {}
     for code, info in etf.ETFS.items():
         print(f"     {code} {info['n'][:10]}...", end=" ")
-        klines = etf.fetch(code, 60)
+        klines = etf.fetch(code, 240)
         sh     = etf.fetch_fund_shares_realtime(code)
 
         if not klines or len(klines) < 22:
@@ -85,8 +85,8 @@ def generate():
         else:
             cp = round(vp*0.7 + dp*0.3, 1)
 
-        # 把近20日K线也打进去（用于柱状图）
-        klines_short = [{"date":k["date"],"v":k["v"]} for k in klines[-20:]]
+        # 把近240日K线也打进去（用于柱状图）
+        klines_short = [{"date":k["date"],"c":round(k["c"],4),"v":k["v"]} for k in klines[-240:]]
 
         shares_val = sh["shares_yi"] if sh else (t_sh or 0)
 
@@ -110,9 +110,21 @@ def generate():
         flag = "三因子" if sp is not None else "二因子"
         print(f"✅ CP={cp}% vr={vr:.2f}x [{flag}]")
 
+    print("  📊 获取板块资金流...")
+    sector_flow = etf.fetch_sector_flow(10)
+    print(f"     流入前3: {[x['name'] for x in sector_flow['top_in'][:3]]}")
+
+    print("  📊 获取南北向资金...")
+    ns_flow = etf.fetch_northsouth_flow()
+    print(f"     北向: {ns_flow['north_yi']:+.1f}亿  南向: {ns_flow['south_yi']:+.1f}亿")
+
     # 3. 注入数据到 HTML 模板
-    backend_data = json.dumps({"indices": indices, "etfs": etf_results},
-                              ensure_ascii=False)
+    backend_data = json.dumps({
+        "indices":     indices,
+        "etfs":        etf_results,
+        "sector_flow": sector_flow,
+        "ns_flow":     ns_flow,
+    }, ensure_ascii=False)
 
     # 读取模板（优先用 workspace，否则用脚本同级目录）
     candidates = [
@@ -132,19 +144,14 @@ def generate():
         print("❌ 找不到 HTML 模板文件")
         return
 
-    html = template.replace("__BACKEND_DATA__", backend_data)
+    if "__BACKEND_DATA__" in template:
+        html = template.replace("__BACKEND_DATA__", backend_data)
+    else:
+        html = re.sub(r"let BACKEND = \{.*?\};", f"let BACKEND = {backend_data};", template, flags=re.DOTALL)
 
     with open(OUTPUT_HTML, "w", encoding="utf-8") as f:
         f.write(html)
     size_kb = len(html) / 1024
-
-    print("  📊 获取板块资金流...")
-    sector_flow = etf.fetch_sector_flow(10)
-    print(f"     流入前3: {[x['name'] for x in sector_flow['top_in'][:3]]}")
-
-    print("  📊 获取南北向资金...")
-    ns_flow = etf.fetch_northsouth_flow()
-    print(f"     北向: {ns_flow['north_yi']:+.1f}亿  南向: {ns_flow['south_yi']:+.1f}亿")
 
     # 写出 JSON（加入新字段）
     json_out = os.path.join(WORKSPACE, "etf_data.json")
