@@ -68,6 +68,8 @@ ETFS = {
     "510050": {"n": "华夏上证50ETF",      "idx": "上证50",  "p": 4},
     "510500": {"n": "华泰柏瑞中证500ETF", "idx": "中证500", "p": 3},
     "512100": {"n": "南方中证1000ETF",    "idx": "中证1000","p": 3},
+    "159915": {"n": "易方达创业板ETF",     "idx": "创业板",   "p": 3},
+    "588000": {"n": "华夏科创50ETF",       "idx": "科创50",   "p": 3},
 }
 
 # 东方财富 secid 映射（上交所=1, 深交所=0）
@@ -79,6 +81,8 @@ _EM_SECID = {
     "510050": "1.510050",
     "510500": "1.510500",
     "512100": "1.512100",
+    "159915": "0.159915",  # 深交所
+    "588000": "1.588000",  # 上交所
 }
 
 SPECIAL = {
@@ -1062,6 +1066,87 @@ def main(target_date=None, do_send=False, record_only=False):
         print(f"\n📧 跳过邮件发送（使用 --send 启用）")
 
     return html
+
+
+def fetch_sector_flow(top_n=10):
+    """
+    获取板块资金流排行（东方财富板块资金流接口）
+    返回: {"top_in": [...], "top_out": [...]}
+    每项: {"name": str, "flow_yi": float, "chg_pct": float}
+    """
+    import ssl
+    ctx = ssl.create_default_context()
+    # 行业板块（申万一级）资金流
+    url = ("https://push2.eastmoney.com/api/qt/clist/get"
+           "?cb=&fid=f62&po=1&pz=50&pn=1&np=1&fltt=2&invt=2"
+           "&ut=b2884a393a59ad64002292a3e90d46a5"
+           "&fields=f12,f14,f2,f3,f62,f184"
+           "&fs=m%3A90+t%3A2&cb=")
+    headers = {"User-Agent": "Mozilla/5.0", "Referer": "https://data.eastmoney.com"}
+    try:
+        req = urllib.request.Request(url, headers=headers)
+        with urllib.request.urlopen(req, timeout=10, context=ctx) as r:
+            d = json.loads(r.read().decode("utf-8"))
+        items = d.get("data", {}).get("diff", []) or []
+        result = []
+        for item in items:
+            flow = item.get("f62", 0) or 0
+            chg = item.get("f3", 0) or 0
+            name = item.get("f14", "")
+            result.append({"name": name, "flow_yi": round(flow / 1e8, 2), "chg_pct": round(chg, 2)})
+        result.sort(key=lambda x: x["flow_yi"], reverse=True)
+        return {
+            "top_in": result[:top_n],
+            "top_out": sorted(result, key=lambda x: x["flow_yi"])[:top_n],
+            "updated": datetime.now().strftime("%H:%M"),
+        }
+    except Exception as e:
+        print(f"  ⚠️ 板块资金流获取失败: {e}")
+        return {"top_in": [], "top_out": [], "updated": "--"}
+
+
+def fetch_northsouth_flow():
+    """
+    获取北向/南向资金每日净流入（沪深港通）
+    北向 = 港股通北向（外资买A股）
+    南向 = 陆股通南向（内资买港股）
+    返回 dict，单位亿元，异动阈值 ±50亿
+    """
+    import ssl
+    ctx = ssl.create_default_context()
+    url = ("https://push2.eastmoney.com/api/qt/kamt/get"
+           "?fields1=f1,f2,f3,f4&fields2=f51,f52,f53,f54,f55,f56"
+           "&ut=b2884a393a59ad64002292a3e90d46a5&cb=")
+    headers = {"User-Agent": "Mozilla/5.0", "Referer": "https://data.eastmoney.com/hsgtcg/"}
+    try:
+        req = urllib.request.Request(url, headers=headers)
+        with urllib.request.urlopen(req, timeout=10, context=ctx) as r:
+            d = json.loads(r.read().decode("utf-8"))
+        data = d.get("data", {})
+        # 北向：hk2sh（沪股通）+ hk2sz（深股通）
+        hk2sh = data.get("hk2sh", {})
+        hk2sz = data.get("hk2sz", {})
+        sh2hk = data.get("sh2hk", {})
+        sz2hk = data.get("sz2hk", {})
+
+        north = round(((hk2sh.get("dayNetAmtIn") or 0) + (hk2sz.get("dayNetAmtIn") or 0)) / 1e8, 2)
+        south = round(((sh2hk.get("dayNetAmtIn") or 0) + (sz2hk.get("dayNetAmtIn") or 0)) / 1e8, 2)
+        ALERT_THRESHOLD = 50
+
+        return {
+            "north_yi": north,
+            "south_yi": south,
+            "north_alert": abs(north) >= ALERT_THRESHOLD,
+            "south_alert": abs(south) >= ALERT_THRESHOLD,
+            "north_label": "北向资金（陆股通）",
+            "south_label": "南向资金（港股通）",
+            "date": hk2sh.get("date2", ""),
+            "updated": datetime.now().strftime("%H:%M"),
+        }
+    except Exception as e:
+        print(f"  ⚠️ 南北向资金获取失败: {e}")
+        return {"north_yi": 0, "south_yi": 0, "north_alert": False, "south_alert": False,
+                "north_label": "北向资金", "south_label": "南向资金", "date": "", "updated": "--"}
 
 
 # ============================================================

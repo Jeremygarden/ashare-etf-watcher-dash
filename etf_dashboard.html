@@ -113,6 +113,19 @@ body.dark .theme-toggle .toggle-knob{left:19px;background:#f9c74f}
 /* ── 下半部分：三因子详情 + 成交量趋势 ── */
 .bottom-row{display:grid;grid-template-columns:420px 1fr;gap:12px;margin:12px 20px 20px}
 
+.shares-panel{margin:12px 20px 0;background:var(--card);border-radius:12px;border:1px solid var(--border);overflow:hidden}
+.shares-header{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.shares-title{font-size:13px;font-weight:700}
+.period-btns{display:flex;gap:4px}
+.period-btn{padding:3px 10px;border-radius:4px;font-size:11px;border:1px solid var(--border);background:var(--soft-2);color:var(--sub);cursor:pointer;transition:all .15s}
+.period-btn.active{background:var(--blue);color:#fff;border-color:var(--blue)}
+.shares-chart-wrap{padding:12px 16px 0;position:relative;height:220px}
+.shares-canvas{width:100%;height:200px;display:block}
+.shares-stats{display:flex;gap:20px;padding:8px 16px 12px;border-top:1px solid var(--border)}
+.shares-stat{text-align:center}
+.shares-stat-label{font-size:10px;color:var(--sub)}
+.shares-stat-val{font-size:14px;font-weight:700;margin-top:2px}
+
 /* 三因子详情面板 */
 .detail-panel{background:var(--card);border-radius:12px;border:1px solid var(--border);overflow:hidden}
 .dp-header{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
@@ -309,6 +322,39 @@ body.dark .refresh-btn{background:#1f6feb}
   </div>
 </div>
 
+<!-- ══ 基金规模走势 ══ -->
+<div class="shares-panel">
+  <div class="shares-header">
+    <div class="shares-title" id="sharesPanelTitle">📈 基金规模走势</div>
+    <div class="period-btns">
+      <button class="period-btn" data-period="5" onclick="setPeriod(5)">5日</button>
+      <button class="period-btn" data-period="10" onclick="setPeriod(10)">10日</button>
+      <button class="period-btn active" data-period="20" onclick="setPeriod(20)">20日</button>
+      <button class="period-btn" data-period="30" onclick="setPeriod(30)">30日</button>
+      <button class="period-btn" data-period="60" onclick="setPeriod(60)">60日</button>
+      <button class="period-btn" data-period="120" onclick="setPeriod(120)">120日</button>
+      <button class="period-btn" data-period="240" onclick="setPeriod(240)">240日</button>
+    </div>
+  </div>
+  <div class="shares-chart-wrap">
+    <canvas class="shares-canvas" id="sharesCanvas"></canvas>
+  </div>
+  <div class="shares-stats">
+    <div class="shares-stat">
+      <div class="shares-stat-label">当日规模</div>
+      <div class="shares-stat-val" id="shareStatToday">--</div>
+    </div>
+    <div class="shares-stat">
+      <div class="shares-stat-label">较前1日</div>
+      <div class="shares-stat-val" id="shareStatD1">--</div>
+    </div>
+    <div class="shares-stat">
+      <div class="shares-stat-label">数据说明</div>
+      <div class="shares-stat-val" style="font-size:11px;color:var(--sub)">份额历史从今日起逐日积累</div>
+    </div>
+  </div>
+</div>
+
 <!-- ══ 下半部分 ══ -->
 <div class="bottom-row">
 
@@ -442,6 +488,59 @@ body.dark .refresh-btn{background:#1f6feb}
   </div>
 </div>
 
+<!-- ══ 板块轮动 + 南北向资金 ══ -->
+<div style="display:grid;grid-template-columns:1fr 1fr 320px;gap:12px;margin:12px 20px 0">
+
+  <!-- 板块资金流入 Top10 -->
+  <div style="background:var(--card);border-radius:12px;border:1px solid var(--border);overflow:hidden">
+    <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px">
+      <span style="font-size:13px;font-weight:700">🔥 板块资金流入 Top10</span>
+      <span style="font-size:10px;color:var(--sub);margin-left:auto" id="sectorUpdated">--</span>
+    </div>
+    <div id="sectorInList" style="padding:8px 0"></div>
+  </div>
+
+  <!-- 板块资金流出 Top10 -->
+  <div style="background:var(--card);border-radius:12px;border:1px solid var(--border);overflow:hidden">
+    <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px">
+      <span style="font-size:13px;font-weight:700">🧊 板块资金流出 Top10</span>
+    </div>
+    <div id="sectorOutList" style="padding:8px 0"></div>
+  </div>
+
+  <!-- 南北向资金 -->
+  <div style="background:var(--card);border-radius:12px;border:1px solid var(--border);overflow:hidden">
+    <div style="padding:12px 16px;border-bottom:1px solid var(--border)">
+      <span style="font-size:13px;font-weight:700">🌐 南北向资金</span>
+    </div>
+    <div style="padding:16px">
+      <!-- 北向 -->
+      <div style="margin-bottom:16px">
+        <div style="font-size:11px;color:var(--sub);margin-bottom:4px">北向资金（外资买A股）</div>
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div id="northVal" style="font-size:26px;font-weight:800">--</div>
+          <div id="northAlert" style="font-size:11px;padding:2px 8px;border-radius:4px;display:none;background:#fff1f0;color:var(--red);font-weight:600">⚠️ 异动</div>
+        </div>
+        <div style="margin-top:6px;height:6px;background:var(--soft-2);border-radius:3px;overflow:hidden">
+          <div id="northBar" style="height:100%;border-radius:3px;width:50%;background:var(--red);transition:width .4s"></div>
+        </div>
+      </div>
+      <!-- 南向 -->
+      <div>
+        <div style="font-size:11px;color:var(--sub);margin-bottom:4px">南向资金（内资买港股）</div>
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div id="southVal" style="font-size:26px;font-weight:800">--</div>
+          <div id="southAlert" style="font-size:11px;padding:2px 8px;border-radius:4px;display:none;background:#fff1f0;color:var(--red);font-weight:600">⚠️ 异动</div>
+        </div>
+        <div style="margin-top:6px;height:6px;background:var(--soft-2);border-radius:3px;overflow:hidden">
+          <div id="southBar" style="height:100%;border-radius:3px;width:50%;background:var(--blue);transition:width .4s"></div>
+        </div>
+      </div>
+      <div style="margin-top:12px;font-size:10px;color:var(--sub);text-align:center" id="nsDate">异动阈值 ±50亿</div>
+    </div>
+  </div>
+</div>
+
 <div class="footer">数据来源：腾讯财经K线 + 东方财富实时API · 三因子模型 v7.2 · 仅供学习参考，不构成投资建议</div>
 
 <script>
@@ -454,6 +553,8 @@ const ETFS_META = {
   "510050":{"name":"上证50","full":"华夏上证50ETF","ex":"sh","exLabel":"沪市","exClass":"ex-sh"},
   "510500":{"name":"中证500","full":"华泰柏瑞中证500ETF","ex":"sh","exLabel":"沪市","exClass":"ex-sh"},
   "512100":{"name":"中证1000","full":"南方中证1000ETF","ex":"sh","exLabel":"沪市","exClass":"ex-sh"},
+  "159915":{"name":"创业板ETF","full":"易方达创业板ETF","ex":"sz","exLabel":"深市","exClass":"ex-sz"},
+  "588000":{"name":"科创50ETF","full":"华夏科创50ETF","ex":"sh","exLabel":"科创","exClass":"ex-ke"},
 };
 
 // 注入后端数据（由 Python 生成）
@@ -729,6 +830,131 @@ function renderVolChart(code){
   }).join("");
 }
 
+// 当前选中周期（天数）
+let currentPeriod = 20;
+const PERIODS = [5, 10, 20, 30, 60, 120, 240];
+
+function renderSharesChart(code){
+  const d = (BACKEND.etfs||{})[code];
+  if(!d) return;
+
+  const titleEl = document.getElementById("sharesPanelTitle");
+  if(titleEl) titleEl.textContent = `📈 基金规模走势 — ${ETFS_META[code]?.name||code}`;
+
+  const klines = (d.klines||[]).slice(-currentPeriod);
+  if(!klines.length) return;
+
+  const canvas = document.getElementById("sharesCanvas");
+  if(!canvas) return;
+  const ctx2 = canvas.getContext("2d");
+
+  const dpr = window.devicePixelRatio||1;
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  ctx2.scale(dpr, dpr);
+  const W = rect.width, H = rect.height;
+
+  const PAD = {top:20,right:60,bottom:30,left:60};
+  const cW = W - PAD.left - PAD.right;
+  const cH = H - PAD.top - PAD.bottom;
+
+  ctx2.clearRect(0,0,W,H);
+
+  const prices = klines.map(k=>k.c||0).filter(Boolean);
+  const vols = klines.map(k=>(k.v||0)/10000);
+  const shares = klines.map((k,i)=> i===klines.length-1 ? (d.shares_yi||null) : null);
+
+  const maxPrice = Math.max(...prices) * 1.02;
+  const minPrice = Math.min(...prices) * 0.98;
+  const maxVol = Math.max(...vols) * 1.2;
+  const maxShare = (d.shares_yi||0) * 1.1 || 1;
+
+  const xStep = cW / (klines.length - 1 || 1);
+
+  function xPos(i){ return PAD.left + i * xStep; }
+  function yPrice(v){ return PAD.top + cH - (v - minPrice) / (maxPrice - minPrice) * cH; }
+  function yShare(v){ return PAD.top + cH - v / maxShare * cH; }
+
+  ctx2.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--border') || '#e8ecf2';
+  ctx2.lineWidth = 0.5;
+  for(let g=0; g<=4; g++){
+    const y = PAD.top + (cH/4)*g;
+    ctx2.beginPath();
+    ctx2.moveTo(PAD.left,y);
+    ctx2.lineTo(W-PAD.right,y);
+    ctx2.stroke();
+  }
+
+  const volH = cH * 0.25;
+  vols.forEach((v,i)=>{
+    const bH = (v / maxVol) * volH;
+    ctx2.fillStyle = 'rgba(100,150,200,0.25)';
+    ctx2.fillRect(xPos(i) - xStep*0.35, PAD.top + cH - bH, xStep*0.7, bH);
+  });
+
+  ctx2.setLineDash([4,3]);
+  ctx2.strokeStyle = '#722ed1';
+  ctx2.lineWidth = 1.5;
+  ctx2.beginPath();
+  klines.forEach((k,i)=>{
+    if(!k.c) return;
+    i===0 ? ctx2.moveTo(xPos(i), yPrice(k.c)) : ctx2.lineTo(xPos(i), yPrice(k.c));
+  });
+  ctx2.stroke();
+  ctx2.setLineDash([]);
+
+  shares.forEach((s,i)=>{
+    if(s===null) return;
+    ctx2.fillStyle = '#00b96b';
+    ctx2.beginPath();
+    ctx2.arc(xPos(i), yShare(s), 5, 0, Math.PI*2);
+    ctx2.fill();
+    ctx2.fillStyle = '#00b96b';
+    ctx2.font = '10px sans-serif';
+    ctx2.fillText(`${s.toFixed(1)}亿`, xPos(i)-20, yShare(s)-8);
+  });
+
+  ctx2.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--sub') || '#6b7a99';
+  ctx2.font = '9px sans-serif';
+  ctx2.textAlign = 'center';
+  const step = Math.max(1, Math.floor(klines.length / 6));
+  klines.forEach((k,i)=>{
+    if(i % step !== 0 && i !== klines.length - 1) return;
+    ctx2.fillText(k.date ? k.date.slice(5) : '', xPos(i), H - 5);
+  });
+
+  ctx2.textAlign = 'right';
+  ctx2.fillStyle = '#00b96b';
+  ctx2.fillText(`${(maxShare * 0.9).toFixed(0)}亿`, PAD.left - 4, PAD.top + cH * 0.1);
+  ctx2.fillText(`${(d.shares_yi||0).toFixed(1)}亿`, PAD.left - 4, yShare(d.shares_yi||0));
+
+  ctx2.textAlign = 'left';
+  ctx2.fillStyle = '#722ed1';
+  ctx2.fillText(maxPrice.toFixed(2), W - PAD.right + 4, PAD.top + 10);
+  ctx2.fillText(minPrice.toFixed(2), W - PAD.right + 4, PAD.top + cH);
+
+  const lastKline = klines[klines.length - 1];
+  const prev1 = klines[klines.length - 2];
+  const prev5 = klines.length >= 5 ? klines[klines.length - 6] : null;
+  const prev20 = klines[0];
+  document.getElementById("shareStatToday").textContent =
+    d.shares_yi ? `${d.shares_yi.toFixed(2)}亿份` : '--';
+  document.getElementById("shareStatD1").textContent =
+    d.delta_yi !== null && d.delta_yi !== undefined
+      ? `${d.delta_yi > 0 ? '+' : ''}${d.delta_yi.toFixed(2)}亿 (${d.delta_pct > 0 ? '+' : ''}${(d.delta_pct||0).toFixed(2)}%)` : 'N/A';
+  document.getElementById("shareStatD1").style.color =
+    d.delta_yi > 0 ? 'var(--red)' : d.delta_yi < 0 ? 'var(--green)' : 'var(--sub)';
+}
+
+function setPeriod(n){
+  currentPeriod = n;
+  document.querySelectorAll('.period-btn').forEach(btn=>{
+    btn.classList.toggle('active', parseInt(btn.dataset.period) === n);
+  });
+  renderSharesChart(selectedCode);
+}
+
 // ══ 渲染信号矩阵 ══
 function renderMatrix(){
   const etfs = BACKEND.etfs||{};
@@ -780,6 +1006,7 @@ function selectEtf(code){
   });
   renderDetail(code);
   renderVolChart(code);
+  renderSharesChart(code);
 }
 
 // ══ 更新时间 ══
@@ -825,6 +1052,60 @@ async function refreshData(){
 }
 
 // ══ 初始化 ══
+// ══ 板块资金流渲染 ══
+function renderSectorFlow(){
+  const sf = BACKEND.sector_flow || {};
+  const updated = sf.updated || '--';
+  const updEl = document.getElementById('sectorUpdated');
+  if(updEl) updEl.textContent = `更新: ${updated}`;
+
+  function makeRow(item, isIn){
+    const color = isIn ? 'var(--red)' : 'var(--green)';
+    const sign  = isIn ? '+' : '';
+    const pct   = item.chg_pct || 0;
+    const pctColor = pct > 0 ? 'var(--red)' : pct < 0 ? 'var(--green)' : 'var(--sub)';
+    return `<div style="display:flex;align-items:center;padding:5px 16px;gap:8px;border-bottom:1px solid var(--soft-2)">
+      <div style="font-size:12px;font-weight:600;flex:1;color:var(--text)">${item.name}</div>
+      <div style="font-size:11px;color:${pctColor};min-width:46px;text-align:right">${pct>0?'+':''}${pct.toFixed(2)}%</div>
+      <div style="font-size:12px;font-weight:700;color:${color};min-width:60px;text-align:right">${sign}${item.flow_yi.toFixed(2)}亿</div>
+    </div>`;
+  }
+
+  const inEl  = document.getElementById('sectorInList');
+  const outEl = document.getElementById('sectorOutList');
+  if(inEl)  inEl.innerHTML  = (sf.top_in  || []).map(x => makeRow(x, true)).join('') || '<div style="padding:20px;text-align:center;color:var(--sub);font-size:12px">数据加载中...</div>';
+  if(outEl) outEl.innerHTML = (sf.top_out || []).map(x => makeRow(x, false)).join('') || '<div style="padding:20px;text-align:center;color:var(--sub);font-size:12px">数据加载中...</div>';
+}
+
+// ══ 南北向资金渲染 ══
+function renderNSFlow(){
+  const ns = BACKEND.ns_flow || {};
+  const THRESHOLD = 50;
+
+  function renderFlow(valId, alertId, barId, val, alert){
+    const el = document.getElementById(valId);
+    const alertEl = document.getElementById(alertId);
+    const barEl = document.getElementById(barId);
+    if(!el) return;
+    const absVal = Math.abs(val || 0);
+    const color  = val > 0 ? 'var(--red)' : val < 0 ? 'var(--green)' : 'var(--sub)';
+    el.textContent = val !== undefined ? `${val > 0 ? '+' : ''}${val.toFixed(2)}亿` : '--';
+    el.style.color = color;
+    if(alertEl){ alertEl.style.display = alert ? 'block' : 'none'; }
+    if(barEl){
+      const pct = Math.min(100, (absVal / Math.max(THRESHOLD, absVal)) * 100);
+      barEl.style.width = pct + '%';
+      barEl.style.background = val > 0 ? 'var(--red)' : 'var(--green)';
+    }
+  }
+
+  renderFlow('northVal', 'northAlert', 'northBar', ns.north_yi, ns.north_alert);
+  renderFlow('southVal', 'southAlert', 'southBar', ns.south_yi, ns.south_alert);
+
+  const dateEl = document.getElementById('nsDate');
+  if(dateEl && ns.date) dateEl.textContent = `${ns.date} · 异动阈值 ±${THRESHOLD}亿`;
+}
+
 function init(){
   initTheme();
   updateTime();
@@ -833,7 +1114,10 @@ function init(){
   renderETFGrid();
   renderDetail(selectedCode);
   renderVolChart(selectedCode);
+  renderSharesChart(selectedCode);
   renderMatrix();
+  renderSectorFlow();
+  renderNSFlow();
 }
 
 init();

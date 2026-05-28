@@ -138,9 +138,24 @@ def generate():
         f.write(html)
     size_kb = len(html) / 1024
 
+    print("  📊 获取板块资金流...")
+    sector_flow = etf.fetch_sector_flow(10)
+    print(f"     流入前3: {[x['name'] for x in sector_flow['top_in'][:3]]}")
+
+    print("  📊 获取南北向资金...")
+    ns_flow = etf.fetch_northsouth_flow()
+    print(f"     北向: {ns_flow['north_yi']:+.1f}亿  南向: {ns_flow['south_yi']:+.1f}亿")
+
+    # 写出 JSON（加入新字段）
     json_out = os.path.join(WORKSPACE, "etf_data.json")
     with open(json_out, "w", encoding="utf-8") as f:
-        json.dump({"indices": indices, "etfs": etf_results, "generated_at": datetime.now().isoformat()}, f, ensure_ascii=False, indent=2)
+        json.dump({
+            "indices": indices,
+            "etfs": etf_results,
+            "sector_flow": sector_flow,
+            "ns_flow": ns_flow,
+            "generated_at": datetime.now().isoformat(),
+        }, f, ensure_ascii=False, indent=2)
     print(f"   JSON: {json_out}")
 
     print(f"\n✅ 看板已生成: {OUTPUT_HTML} ({size_kb:.0f}KB)")
