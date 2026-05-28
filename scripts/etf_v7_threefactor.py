@@ -1133,6 +1133,10 @@ def fetch_northsouth_flow():
         south = round(((sh2hk.get("dayNetAmtIn") or 0) + (sz2hk.get("dayNetAmtIn") or 0)) / 1e8, 2)
         ALERT_THRESHOLD = 50
 
+        # 非交易时段 dayNetAmtIn=0 是正常的，加上 status 字段说明
+        sh_status  = hk2sh.get("status", 0)
+        note = "交易中" if sh_status == 2 else ("已收盘" if sh_status == 1 else "休市")
+
         return {
             "north_yi": north,
             "south_yi": south,
@@ -1140,6 +1144,9 @@ def fetch_northsouth_flow():
             "south_alert": abs(south) >= ALERT_THRESHOLD,
             "north_label": "北向资金（陆股通）",
             "south_label": "南向资金（港股通）",
+            "note": note,
+            "sh_detail": round((hk2sh.get("dayNetAmtIn") or 0) / 1e8, 2),
+            "sz_detail": round((hk2sz.get("dayNetAmtIn") or 0) / 1e8, 2),
             "date": hk2sh.get("date2", ""),
             "updated": datetime.now().strftime("%H:%M"),
         }
