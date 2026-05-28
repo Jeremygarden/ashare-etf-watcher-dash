@@ -154,7 +154,7 @@ body{background:var(--bg);font-family:'PingFang SC','Microsoft YaHei',sans-serif
   <div class="card">
     <div class="card-title">
       情绪综合指数
-      <span class="info-icon">ℹ<span class="tooltip">综合大盘系数、超短情绪、弱钱效应、三线分数的加权综合情绪评分（0-100）</span></span>
+      <span class="info-icon">ℹ<span class="tooltip">综合大盘系数、超短情绪、亏钱效应、三线分数的加权综合情绪评分（0-100）</span></span>
     </div>
     <div class="card-subtitle">综合市场情绪强弱指标</div>
     <span class="emotion-label-badge" id="emotionBadge" style="background:#dcfce7;color:#166534">情绪冰</span>
@@ -279,11 +279,11 @@ body{background:var(--bg);font-family:'PingFang SC','Microsoft YaHei',sans-serif
     <div class="metric-sub">短线爆发力度</div>
   </div>
 
-  <!-- 弱钱效应 -->
+  <!-- 亏钱效应 -->
   <div class="card-dark">
     <div style="font-size:12px;color:#94a3b8;display:flex;align-items:center;gap:4px">
-      弱钱效应
-      <span class="info-icon" style="background:#334155;color:#94a3b8">ℹ<span class="tooltip">反向指标：炸板率越高，弱钱效应越强，市场越弱。越高代表环境越差</span></span>
+      亏钱效应
+      <span class="info-icon" style="background:#334155;color:#94a3b8">ℹ<span class="tooltip">反向指标：炸板率越高，亏钱效应越强，市场越弱。越高代表环境越差</span></span>
     </div>
     <div class="metric-val" id="weakMoneyVal">70.1</div>
     <div class="metric-change" id="weakMoneyChange" style="color:var(--green)">-15.0</div>
@@ -294,7 +294,7 @@ body{background:var(--bg);font-family:'PingFang SC','Microsoft YaHei',sans-serif
   <div class="card-dark">
     <div style="font-size:12px;color:#94a3b8;display:flex;align-items:center;gap:4px">
       三线分数
-      <span class="info-icon" style="background:#334155;color:#94a3b8">ℹ<span class="tooltip">（大盘系数 + 超短情绪 + 100-弱钱效应）/ 3，综合三线均衡得分</span></span>
+      <span class="info-icon" style="background:#334155;color:#94a3b8">ℹ<span class="tooltip">（大盘系数 + 超短情绪 + 100-亏钱效应）/ 3，综合三线均衡得分</span></span>
     </div>
     <div class="metric-val" id="threeLineVal">23.9</div>
     <div class="metric-change" id="threeLineChange" style="color:var(--green)">+1</div>
@@ -322,22 +322,23 @@ body{background:var(--bg);font-family:'PingFang SC','Microsoft YaHei',sans-serif
   <div class="chart-header">
     <div>
       <span class="chart-title">情绪周期三线监控</span>
-      <span class="ice-tag" id="iceTag" style="margin-left:10px">冰点运行7天</span>
+      <span class="ice-tag" id="iceTag" style="margin-left:10px">冰点信号 0 次</span>
     </div>
     <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
       <div class="chart-legend">
         <div class="legend-item"><div class="legend-dot" style="background:#ef4444"></div><span>大盘系数</span></div>
         <div class="legend-item"><div class="legend-dot" style="background:#8b5cf6"></div><span>超短情绪</span></div>
-        <div class="legend-item"><div class="legend-dot" style="background:#10b981"></div><span>弱钱效应</span></div>
+        <div class="legend-item"><div class="legend-dot" style="background:#10b981"></div><span>亏钱效应</span></div>
         <div class="legend-item"><div class="legend-dot" style="background:#3b82f6"></div><span>综合指数</span></div>
-        <div class="legend-item"><div class="legend-dot" style="background:#ef444440;border:1px solid #ef4444"></div><span>高潮区80-100</span></div>
-        <div class="legend-item"><div class="legend-dot" style="background:#3b82f640;border:1px solid #3b82f6"></div><span>冰点区0-20</span></div>
+        <div class="legend-item"><span style="color:#3b82f6;font-weight:700;line-height:1">▲</span><span>冰冰点</span></div>
+        <div class="legend-item"><div class="legend-dot" style="background:#ef444440;border:1px solid #ef4444"></div><span>高潮区 80-100</span></div>
+        <div class="legend-item"><div class="legend-dot" style="background:#3b82f640;border:1px solid #3b82f6"></div><span>冰点区 0-20</span></div>
       </div>
       <div class="tab-group" id="chartTabs">
         <button class="tab-btn active" onclick="showChartLine('all', event)">全部</button>
         <button class="tab-btn" onclick="showChartLine('market', event)">大盘系数</button>
         <button class="tab-btn" onclick="showChartLine('sentiment', event)">超短情绪</button>
-        <button class="tab-btn" onclick="showChartLine('weak', event)">弱钱效应</button>
+        <button class="tab-btn" onclick="showChartLine('weak', event)">亏钱效应</button>
         <button class="tab-btn" onclick="showChartLine('composite', event)">综合指数</button>
       </div>
     </div>
@@ -407,7 +408,7 @@ body{background:var(--bg);font-family:'PingFang SC','Microsoft YaHei',sans-serif
     <div class="risk-title">⚠ 风险提示</div>
     <div class="risk-item" id="riskItem1">
       <span class="risk-icon">▲</span>
-      <span>弱钱效应偏高(70.1)，优先降仓含不足追涨</span>
+      <span>亏钱效应偏高(70.1)，优先降仓含不足追涨</span>
     </div>
     <div class="risk-item" id="riskItem2">
       <span class="risk-icon">▲</span>
@@ -426,10 +427,10 @@ function normalize(val, min, max){
   return Math.max(0, Math.min(100, (val - min) / (max - min) * 100));
 }
 function calcMarketCoef(sh3, upRatio, northFlow){
-  const a = normalize(sh3, -3, 3);
-  const b = normalize(upRatio * 100, 20, 80);
-  const c = normalize(northFlow, -100, 100);
-  return Math.round(a * 0.4 + b * 0.3 + c * 0.3);
+  const a = normalize(sh3, -2, 2);
+  const b = normalize(upRatio * 100, 30, 70);
+  const c = normalize(northFlow, -80, 80);
+  return Math.round(a * 0.45 + b * 0.35 + c * 0.20);
 }
 // Previous day zt count for badge delta calculation (updated after each fetch)
 let prevDayZtCount = 0;
@@ -437,11 +438,14 @@ let prevDayZtCount = 0;
 function calcSentiment(ztCount, avgTurnover, mainNetFlow){
   const a = normalize(ztCount, 0, 150);
   const b = normalize(avgTurnover, 0, 5);
-  const c = normalize(mainNetFlow, -500, 500);
+  const c = normalize(mainNetFlow, -3000, 3000);
   return Math.round(a * 0.4 + b * 0.3 + c * 0.3);
 }
-function calcWeakMoney(zbRate, fbRate){
-  return Math.round(zbRate * 0.6 + (100 - fbRate) * 0.4);
+function calcWeakMoney(zbRate, upRatio, mainNetYi){
+  const a = normalize(zbRate, 0, 60);
+  const b = normalize((1 - upRatio) * 100, 20, 80);
+  const c = normalize(-mainNetYi, -3000, 3000);
+  return Math.round(a * 0.50 + b * 0.30 + c * 0.20);
 }
 function calcThreeLine(market, sentiment, weakMoney){
   return Math.round((market + sentiment + (100 - weakMoney)) / 3);
@@ -502,11 +506,11 @@ function seededRandom(seed){
 function generateHistory(days=60){
   const rng = seededRandom(20260515);
   const history = [];
-  let market = 45, sentiment = 40, weak = 55;
+  let market = 30, sentiment = 20, weak = 65;
   for(let i = 0; i < days; i++){
-    market   = Math.max(5, Math.min(95, market + (rng()-0.5)*15));
+    market   = Math.max(5, Math.min(95, market + (rng()-0.5)*20));
     sentiment= Math.max(5, Math.min(95, sentiment + (rng()-0.5)*18));
-    weak     = Math.max(10, Math.min(90, weak + (rng()-0.5)*12));
+    weak     = Math.max(10, Math.min(90, weak + (rng()-0.5)*15));
     const threeLine = calcThreeLine(market, sentiment, weak);
     const composite = calcComposite(market, sentiment, weak, threeLine);
     const date = new Date('2026-03-15');
@@ -564,13 +568,22 @@ let activeLines = {market:true, sentiment:true, weak:true, composite:true};
 
 function buildChartData(range){
   const data = historyData.slice(-range);
+  const endData = data.length > 0 ? data[data.length - 1] : null;
+  const endOnly = (value) => {
+    if(!data.length) return [];
+    return Array(data.length - 1).fill(null).concat([value]);
+  };
   return {
     labels: data.map(d => d.date),
     datasets: [
-      {label:'大盘系数', data:data.map(d=>d.market), borderColor:'#ef4444', backgroundColor:'transparent', tension:.3, pointRadius:2, hidden:!activeLines.market},
-      {label:'超短情绪', data:data.map(d=>d.sentiment), borderColor:'#8b5cf6', backgroundColor:'transparent', tension:.3, pointRadius:2, hidden:!activeLines.sentiment},
-      {label:'弱钱效应', data:data.map(d=>d.weak), borderColor:'#10b981', backgroundColor:'transparent', tension:.3, pointRadius:2, hidden:!activeLines.weak},
-      {label:'综合指数', data:data.map(d=>d.composite), borderColor:'#3b82f6', backgroundColor:'rgba(59,130,246,0.08)', tension:.3, pointRadius:2, fill:true, hidden:!activeLines.composite},
+      {label:'大盘系数', data:data.map(d=>d.market), borderColor:'#ef4444', backgroundColor:'transparent', tension:.3, pointRadius:4, pointHoverRadius:7, pointBackgroundColor:'#ef4444', pointBorderColor:'white', pointBorderWidth:1.5, hidden:!activeLines.market},
+      {label:'超短情绪', data:data.map(d=>d.sentiment), borderColor:'#8b5cf6', backgroundColor:'transparent', tension:.3, pointRadius:4, pointHoverRadius:7, pointBackgroundColor:'#8b5cf6', pointBorderColor:'white', pointBorderWidth:1.5, hidden:!activeLines.sentiment},
+      {label:'亏钱效应', data:data.map(d=>d.weak), borderColor:'#10b981', backgroundColor:'transparent', tension:.3, pointRadius:4, pointHoverRadius:7, pointBackgroundColor:'#10b981', pointBorderColor:'white', pointBorderWidth:1.5, hidden:!activeLines.weak},
+      {label:'综合指数', data:data.map(d=>d.composite), borderColor:'#3b82f6', backgroundColor:'rgba(59,130,246,0.08)', tension:.3, pointRadius:4, pointHoverRadius:7, pointBackgroundColor:'#3b82f6', pointBorderColor:'white', pointBorderWidth:1.5, fill:true, hidden:!activeLines.composite},
+      {label:'_end_market', data:endOnly(endData?.market), borderColor:'#ef4444', backgroundColor:'transparent', pointRadius:8, pointHoverRadius:10, pointBackgroundColor:'transparent', pointBorderColor:'#ef4444', pointBorderWidth:2, tension:0, fill:false, hidden:!activeLines.market},
+      {label:'_end_sentiment', data:endOnly(endData?.sentiment), borderColor:'#8b5cf6', backgroundColor:'transparent', pointRadius:8, pointHoverRadius:10, pointBackgroundColor:'transparent', pointBorderColor:'#8b5cf6', pointBorderWidth:2, tension:0, fill:false, hidden:!activeLines.sentiment},
+      {label:'_end_weak', data:endOnly(endData?.weak), borderColor:'#10b981', backgroundColor:'transparent', pointRadius:8, pointHoverRadius:10, pointBackgroundColor:'transparent', pointBorderColor:'#10b981', pointBorderWidth:2, tension:0, fill:false, hidden:!activeLines.weak},
+      {label:'_end_composite', data:endOnly(endData?.composite), borderColor:'#3b82f6', backgroundColor:'transparent', pointRadius:8, pointHoverRadius:10, pointBackgroundColor:'transparent', pointBorderColor:'#3b82f6', pointBorderWidth:2, tension:0, fill:false, hidden:!activeLines.composite},
     ]
   };
 }
@@ -596,6 +609,37 @@ function initChart(){
       ctx.fillStyle = 'rgba(59,130,246,0.08)';
       ctx.fillRect(chartArea.left, y20, chartArea.right - chartArea.left, y0 - y20);
       ctx.restore();
+
+      ctx.save();
+      ctx.font = '12px -apple-system, PingFang SC, sans-serif';
+      ctx.fillStyle = 'rgba(239,68,68,0.5)';
+      ctx.textAlign = 'center';
+      const midX = (chartArea.left + chartArea.right) / 2;
+      ctx.fillText('高潮区 80-100', midX, (y80 + y100) / 2 + 6);
+      ctx.fillStyle = 'rgba(59,130,246,0.5)';
+      ctx.fillText('冰点区 0-20', midX, (y20 + y0) / 2 + 6);
+      ctx.restore();
+    },
+    afterDraw(chart){
+      const {ctx, data, scales} = chart;
+      const xAxis = scales.x, yAxis = scales.y;
+      data.datasets.forEach((ds) => {
+        if((ds.label || '').startsWith('_')) return;
+        (ds.data || []).forEach((val, i) => {
+          if(val === null || val === undefined || val < 80) return;
+          const x = xAxis.getPixelForValue(i);
+          const y = yAxis.getPixelForValue(val) - 14;
+          ctx.save();
+          ctx.beginPath();
+          ctx.moveTo(x, y - 8);
+          ctx.lineTo(x - 6, y + 2);
+          ctx.lineTo(x + 6, y + 2);
+          ctx.closePath();
+          ctx.fillStyle = '#3b82f6';
+          ctx.fill();
+          ctx.restore();
+        });
+      });
     }
   };
 
@@ -618,6 +662,7 @@ function initChart(){
       scales: {
         y: {
           min:0, max:100,
+          title: { display: true, text: '指数（0-100）', color: '#94a3b8', font: { size: 11 } },
           grid: {color:'rgba(226,232,240,0.5)'},
           ticks: {color:'#94a3b8', stepSize:20}
         },
@@ -625,8 +670,9 @@ function initChart(){
           grid: {display:false},
           ticks: {
             color:'#94a3b8',
-            maxTicksLimit: Math.min(currentRange, 15),
+            autoSkip: false,
             maxRotation: 0,
+            minRotation: 0,
           }
         }
       }
@@ -652,7 +698,7 @@ function setRange(days){
   document.querySelector(`.range-btn[data-days="${days}"]`).classList.add('active');
   if(emotionChart){
     emotionChart.data = buildChartData(days);
-    emotionChart.options.scales.x.ticks.maxTicksLimit = Math.min(days, 15);
+    emotionChart.options.scales.x.ticks.autoSkip = false;
     emotionChart.update();
   }
   updateChartStats(days);
@@ -755,7 +801,7 @@ function updateUI(data){
 
   // Risk items
   const risks = [];
-  if(weak > 60) risks.push(`弱钱效应偏高(${weak})，优先降仓，不足追涨`);
+  if(weak > 60) risks.push(`亏钱效应偏高(${weak})，优先降仓，不足追涨`);
   if(zbRate > 35) risks.push(`炸板率${zbRate}%处于高位，追板风险大，建议回封确认`);
   else if(zbRate >= 20) risks.push(`炸板率${zbRate}%偏高，追板需等回封`);
   if(composite < 25) risks.push('综合情绪处于冰点，建议观望为主');
@@ -801,7 +847,7 @@ const APIS = {
   market_sh: 'https://push2.eastmoney.com/api/qt/stock/get?fields=f104,f105,f106,f3&secid=1.000001&ut=bd1d9ddb04089700cf9c27f6f7426281',
   market_sz: 'https://push2.eastmoney.com/api/qt/stock/get?fields=f104,f105,f106,f3&secid=0.399001&ut=bd1d9ddb04089700cf9c27f6f7426281',
   hs300: 'https://push2.eastmoney.com/api/qt/stock/get?fields=f43,f3,f8&secid=1.000300&ut=bd1d9ddb04089700cf9c27f6f7426281',
-  mainflow: 'https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=200&np=1&fltt=2&invt=2&fid=f62&po=0&ut=bd1d9ddb04089700cf9c27f6f7426281&fields=f62,f3,f8&fs=m%3A0%2Bt%3A6%2Cm%3A0%2Bt%3A13%2Cm%3A0%2Bt%3A80%2Cm%3A1%2Bt%3A2%2Cm%3A1%2Bt%3A23',
+  mainflow: 'https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=200&np=1&fltt=2&invt=2&fid=f8&po=1&ut=bd1d9ddb04089700cf9c27f6f7426281&fields=f62,f3,f8&fs=m%3A0%2Bt%3A6%2Cm%3A0%2Bt%3A13%2Cm%3A0%2Bt%3A80%2Cm%3A1%2Bt%3A2%2Cm%3A1%2Bt%3A23',
   north: 'https://push2.eastmoney.com/api/qt/kamt/get?fields1=f1,f2,f3,f4&fields2=f51,f52,f53,f54,f55,f56&ut=b2884a393a59ad64002292a3e90d46a5',
 };
 
@@ -862,7 +908,7 @@ async function fetchAllData(){
 
     const market = calcMarketCoef(sh3, upRatio, northFlow);
     const sentiment = calcSentiment(ztCount, avgTurnover, mainNetFlow);
-    const weak = calcWeakMoney(zbRate, fbRate);
+    const weak = calcWeakMoney(zbRate, upRatio, mainNetFlow);
     const threeLine = calcThreeLine(market, sentiment, weak);
     const composite = calcComposite(market, sentiment, weak, threeLine);
 
@@ -909,14 +955,10 @@ window.addEventListener('DOMContentLoaded', () => {
   historyData = generateHistory(60);
 
   // Update ice tag
-  const iceDays = computeIceDays(historyData);
-  if(iceDays > 0){
-    document.getElementById('iceTag').textContent = `冰点运行${iceDays}天`;
-    document.getElementById('iceTag').style.display = 'inline-block';
-    document.getElementById('iceRunning').textContent = `${iceDays}/10`;
-  } else {
-    document.getElementById('iceTag').style.display = 'none';
-  }
+  const iceSignalCount = historyData.filter(d => d.composite < 20).length;
+  document.getElementById('iceTag').textContent = `冰点信号 ${iceSignalCount} 次`;
+  document.getElementById('iceTag').style.display = 'inline-block';
+  document.getElementById('iceRunning').textContent = `${iceSignalCount}/10`;
 
   // Update stat date
   if(historyData.length > 0){
@@ -959,6 +1001,15 @@ window.addEventListener('DOMContentLoaded', () => {
     document.getElementById('tradeDateDisplay').textContent = d;
   });
 });
+
+// 修复后自检（仅在 console 输出，不显示在页面）
+const testData = { sh3: 0.12, upRatio: 0.45, northFlow: 0.08, ztCount: 102, avgTo: 6.3, mainNetYi: -150, zbRate: 17.1 };
+const tm = calcMarketCoef(testData.sh3, testData.upRatio, testData.northFlow);
+const ts = calcSentiment(testData.ztCount, testData.avgTo, testData.mainNetYi);
+const tw = calcWeakMoney(testData.zbRate, testData.upRatio, testData.mainNetYi);
+const ttl = calcThreeLine(tm, ts, tw);
+const tc = calcComposite(tm, ts, tw, ttl);
+console.log('[三线修复验证]', {大盘系数:tm, 超短情绪:ts, 亏钱效应:tw, 三线分数:ttl, 综合指数:tc});
 </script>
 </body>
 </html>
