@@ -76,7 +76,14 @@ def generate():
         vp = round(etf.vprob(vr), 1)
         dp = round(etf.dprob(chg, 0, 0, vr, indices["hs300"]["chg"]), 1)
 
-        t_sh, p_sh, delta_yi, delta_pct = etf.get_historical_share(code, last["date"], shares_history)
+        # 查最近有份额数据的交易日（今日可能是非交易日）
+        _share_dates = sorted(shares_history.keys())
+        _query_date = last["date"]
+        if _query_date not in shares_history and _share_dates:
+            # 找最近的一个有数据且不晚于今日的日期
+            _cands = [d for d in _share_dates if d <= _query_date]
+            _query_date = _cands[-1] if _cands else _share_dates[-1]
+        t_sh, p_sh, delta_yi, delta_pct = etf.get_historical_share(code, _query_date, shares_history)
         sp = etf.sprob(delta_pct) if delta_pct is not None else None
         sp = round(sp, 1) if sp is not None else None
 
@@ -86,7 +93,15 @@ def generate():
             cp = round(vp*0.7 + dp*0.3, 1)
 
         # 把近240日K线也打进去（用于柱状图）
-        klines_short = [{"date":k["date"],"c":round(k["c"],4),"v":k["v"]} for k in klines[-240:]]
+        # 构建 klines，加入份额历史 s 字段（用于基金规模折线图）
+        _shares_map = shares_history  # 借用已加载的历史
+        klines_short = []
+        for k in klines[-240:]:
+            entry = {"date":k["date"],"c":round(k["c"],4),"v":k["v"]}
+            day_shares = _shares_map.get(k["date"],{})
+            if isinstance(day_shares, dict) and code in day_shares:
+                entry["s"] = round(day_shares[code].get("shares_yi",0), 4)
+            klines_short.append(entry)
 
         shares_val = sh["shares_yi"] if sh else (t_sh or 0)
 
@@ -104,7 +119,7 @@ def generate():
             "shares_yi": round(shares_val, 2) if shares_val else 0,
             "delta_yi":  round(delta_yi, 2) if delta_yi is not None else None,
             "delta_pct": round(delta_pct, 2) if delta_pct is not None else None,
-            "has_shares": sp is not None,
+            "has_shares": sh is not None and sh.get("shares_yi") is not None,
             "klines":    klines_short,
         }
         flag = "三因子" if sp is not None else "二因子"
@@ -167,8 +182,8 @@ def generate():
 
     print(f"\n✅ 看板已生成: {OUTPUT_HTML} ({size_kb:.0f}KB)")
     print(f"   分析日期: {list(etf_results.values())[0]['date'] if etf_results else 'N/A'}")
-    print(f"   ETF覆盖:  {len(etf_results)}/7")
-    print(f"   份额覆盖: {sum(1 for v in etf_results.values() if v['has_shares'])}/7")
+    print(f"   ETF覆盖:  {len(etf_results)}/{len(etf.ETFS)}")
+    print(f"   份额覆盖: {sum(1 for v in etf_results.values() if v['has_shares'])}/{len(etf.ETFS)}")
 
 if __name__ == "__main__":
     generate()
