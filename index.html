@@ -604,79 +604,65 @@ html,body{overflow-x:hidden;max-width:100vw}
 
 </div>
 
-<!-- ══ 近20日信号矩阵 ══ -->
-<div class="matrix-panel">
-  <div class="mp-header">
-    <div class="mp-title">近20日量能信号矩阵（ETF × 交易日）</div>
-    <div class="mp-legend">
-      <div class="ml-item"><div class="ml-dot" style="background:var(--green)"></div>高信号</div>
-      <div class="ml-item"><div class="ml-dot" style="background:var(--yellow)"></div>中信号</div>
-      <div class="ml-item"><div class="ml-dot" style="background:#e8ecf2"></div>无信号</div>
+<!-- ══ 信号事件时间轴 ══ -->
+<div class="matrix-panel" style="margin:12px 20px 20px">
+  <div class="mp-header" style="justify-content:space-between">
+    <div>
+      <div class="mp-title">📅 历史护盘信号事件</div>
+      <div style="font-size:11px;color:var(--sub);margin-top:2px">近240日 · 仅展示有效信号日 · 共 <span id="sigEventTotal">23</span> 次</div>
+    </div>
+    <div style="display:flex;gap:16px;font-size:12px">
+      <div style="text-align:center">
+        <div style="font-size:22px;font-weight:800;color:var(--red)" id="sigHighCount">4</div>
+        <div style="color:var(--sub);font-size:10px">🔴 高确信</div>
+      </div>
+      <div style="text-align:center">
+        <div style="font-size:22px;font-weight:800;color:var(--yellow)" id="sigMidCount">19</div>
+        <div style="color:var(--sub);font-size:10px">🟡 中等</div>
+      </div>
+      <div style="text-align:center">
+        <div style="font-size:22px;font-weight:800;color:var(--sub)" id="sigRecent">7</div>
+        <div style="color:var(--sub);font-size:10px">近60日</div>
+      </div>
     </div>
   </div>
-  <div style="overflow-x:auto">
-    <table class="matrix-table" id="matrixTable">
-      <thead id="matrixHead"></thead>
-      <tbody id="matrixBody"></tbody>
-    </table>
-  </div>
+  <div id="sigTimeline" style="padding:8px 16px 16px;display:flex;flex-direction:column;gap:6px;max-height:280px;overflow-y:auto"></div>
 </div>
 
-<!-- ══ 板块轮动 + 南北向资金 ══ -->
-<div class="sector-ns-row" style="display:grid;grid-template-columns:1fr 1fr 320px;gap:12px;margin:12px 20px 0">
+<script>
+// ══ 信号事件数据 ══
+const SIG_EVENTS = [{"date": "2026-05-11", "high": [], "mid": [["510330", 55.3], ["510310", 55.1], ["159919", 52.8]]}, {"date": "2026-05-07", "high": [], "mid": [["510330", 58.3], ["510310", 54.2], ["510300", 52.0], ["510500", 50.4]]}, {"date": "2026-05-06", "high": [], "mid": [["512100", 64.9], ["510330", 57.6], ["510310", 56.8], ["159919", 55.9]]}, {"date": "2026-04-30", "high": [], "mid": [["159919", 58.6], ["510310", 58.5], ["510330", 58.0], ["510050", 55.5]]}, {"date": "2026-04-29", "high": [], "mid": [["512100", 57.5], ["510500", 54.6], ["510310", 53.8], ["159919", 52.6]]}, {"date": "2026-04-08", "high": [["510500", 77.6], ["512100", 70.6]], "mid": [["510330", 55.1], ["510310", 54.3]]}, {"date": "2026-03-23", "high": [], "mid": [["510050", 65.7], ["510300", 64.4], ["159919", 61.4], ["510310", 59.3]]}, {"date": "2026-01-28", "high": [], "mid": [["510500", 59.5], ["510310", 59.1], ["510330", 59.1], ["159919", 58.7]]}, {"date": "2026-01-26", "high": [], "mid": [["510310", 60.5], ["159919", 60.2], ["510330", 59.9], ["510050", 59.8]]}, {"date": "2026-01-23", "high": [], "mid": [["512100", 63.8], ["510310", 56.8], ["510300", 56.4], ["510330", 55.8]]}, {"date": "2026-01-22", "high": [], "mid": [["510310", 60.8], ["510330", 59.2], ["159919", 56.1], ["510300", 55.5]]}, {"date": "2026-01-21", "high": [], "mid": [["510310", 61.2], ["510330", 60.5], ["512100", 60.5], ["159919", 60.4]]}, {"date": "2026-01-20", "high": [], "mid": [["510310", 61.8], ["510330", 60.9], ["159919", 60.7], ["510500", 55.9]]}, {"date": "2026-01-19", "high": [], "mid": [["510310", 64.0], ["159919", 63.7], ["510330", 63.5], ["510500", 61.2]]}, {"date": "2026-01-16", "high": [], "mid": [["510500", 64.1], ["510310", 63.0], ["159919", 62.6], ["512100", 62.1]]}, {"date": "2026-01-15", "high": [], "mid": [["510330", 61.4], ["510500", 61.4], ["510310", 60.6], ["159919", 59.8]]}, {"date": "2026-01-14", "high": [["510500", 73.1], ["512100", 71.3]], "mid": [["159919", 60.5], ["159915", 59.6], ["510330", 56.7], ["510300", 56.5]]}, {"date": "2026-01-12", "high": [], "mid": [["512100", 68.6], ["510500", 54.0], ["159915", 52.5], ["159919", 51.7]]}, {"date": "2025-11-24", "high": [], "mid": [["510310", 66.1], ["159919", 60.6], ["510500", 60.1], ["510300", 50.9]]}, {"date": "2025-11-21", "high": [["510500", 72.1], ["512100", 70.6]], "mid": [["510330", 61.6], ["159915", 61.3], ["510300", 60.7], ["159919", 60.7]]}, {"date": "2025-08-22", "high": [["510500", 72.8]], "mid": [["510300", 50.4]]}, {"date": "2025-08-18", "high": [], "mid": [["159915", 60.6], ["510500", 60.2], ["512100", 53.5]]}, {"date": "2025-07-11", "high": [], "mid": [["510050", 59.3], ["512100", 56.5], ["588000", 54.4], ["510300", 50.0]]}];
+const ETF_SHORT = {
+  "510300":"华泰沪深300","510310":"易方达沪深300","510330":"华夏沪深300",
+  "159919":"嘉实沪深300","510050":"上证50","510500":"中证500",
+  "512100":"中证1000","159915":"创业板","588000":"科创50"
+};
 
-  <!-- 板块资金流入 Top10 -->
-  <div style="background:var(--card);border-radius:12px;border:1px solid var(--border);overflow:hidden">
-    <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px">
-      <span style="font-size:13px;font-weight:700">🔥 板块资金流入 Top10</span>
-      <span style="font-size:10px;color:var(--sub);margin-left:auto" id="sectorUpdated">--</span>
-    </div>
-    <div id="sectorInList" style="padding:8px 0"></div>
-  </div>
-
-  <!-- 板块资金流出 Top10 -->
-  <div style="background:var(--card);border-radius:12px;border:1px solid var(--border);overflow:hidden">
-    <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px">
-      <span style="font-size:13px;font-weight:700">🧊 板块资金流出 Top10</span>
-    </div>
-    <div id="sectorOutList" style="padding:8px 0"></div>
-  </div>
-
-  <!-- 南北向资金 -->
-  <div style="background:var(--card);border-radius:12px;border:1px solid var(--border);overflow:hidden">
-    <div style="padding:12px 16px;border-bottom:1px solid var(--border)">
-      <span style="font-size:13px;font-weight:700">🌐 南北向资金</span>
-    </div>
-    <div style="padding:16px">
-      <!-- 北向 -->
-      <div style="margin-bottom:16px">
-        <div style="font-size:11px;color:var(--sub);margin-bottom:4px">北向资金（外资买A股）</div>
-        <div style="display:flex;align-items:center;justify-content:space-between">
-          <div id="northVal" style="font-size:26px;font-weight:800">--</div>
-          <div id="northAlert" style="font-size:11px;padding:2px 8px;border-radius:4px;display:none;background:#fff1f0;color:var(--red);font-weight:600">⚠️ 异动</div>
-        </div>
-        <div style="margin-top:6px;height:6px;background:var(--soft-2);border-radius:3px;overflow:hidden">
-          <div id="northBar" style="height:100%;border-radius:3px;width:50%;background:var(--red);transition:width .4s"></div>
-        </div>
+function renderTimeline() {
+  const container = document.getElementById('sigTimeline');
+  if (!container) return;
+  container.innerHTML = SIG_EVENTS.map(e => {
+    const isHigh = e.high.length >= 2;
+    const isMedHigh = e.high.length === 1;
+    const borderColor = isHigh ? 'var(--red)' : isMedHigh ? 'var(--red)' : 'var(--yellow)';
+    const bgColor = isHigh ? 'rgba(245,34,45,0.04)' : 'rgba(250,140,22,0.03)';
+    const allTags = [
+      ...e.high.map(([c,cp]) => `<span style="background:rgba(245,34,45,0.12);color:var(--red);padding:1px 6px;border-radius:3px;font-size:10px;font-weight:600">${ETF_SHORT[c]||c} ${cp.toFixed(0)}%</span>`),
+      ...e.mid.map(([c,cp])  => `<span style="background:rgba(250,140,22,0.1);color:var(--yellow);padding:1px 6px;border-radius:3px;font-size:10px">${ETF_SHORT[c]||c} ${cp.toFixed(0)}%</span>`),
+    ].join(' ');
+    const badge = isHigh || isMedHigh
+      ? `<span style="background:var(--red);color:#fff;font-size:9px;padding:1px 5px;border-radius:3px;font-weight:700">高确信</span>`
+      : `<span style="background:var(--yellow);color:#fff;font-size:9px;padding:1px 5px;border-radius:3px;font-weight:600">中等</span>`;
+    return `<div style="display:flex;align-items:flex-start;gap:12px;padding:8px 10px;border-left:3px solid ${borderColor};background:${bgColor};border-radius:0 6px 6px 0">
+      <div style="min-width:70px">
+        <div style="font-size:12px;font-weight:700;color:var(--text)">${e.date.slice(5)}</div>
+        <div style="margin-top:3px">${badge}</div>
       </div>
-      <!-- 南向 -->
-      <div>
-        <div style="font-size:11px;color:var(--sub);margin-bottom:4px">南向资金（内资买港股）</div>
-        <div style="display:flex;align-items:center;justify-content:space-between">
-          <div id="southVal" style="font-size:26px;font-weight:800">--</div>
-          <div id="southAlert" style="font-size:11px;padding:2px 8px;border-radius:4px;display:none;background:#fff1f0;color:var(--red);font-weight:600">⚠️ 异动</div>
-        </div>
-        <div style="margin-top:6px;height:6px;background:var(--soft-2);border-radius:3px;overflow:hidden">
-          <div id="southBar" style="height:100%;border-radius:3px;width:50%;background:var(--blue);transition:width .4s"></div>
-        </div>
-      </div>
-      <div style="margin-top:12px;font-size:10px;color:var(--sub);text-align:center" id="nsDate">异动阈值 ±50亿</div>
-      <div style="margin-top:8px;font-size:10px;color:var(--sub);text-align:center">非交易时段数值为0属正常</div>
-    </div>
-  </div>
-</div>
-
-<div class="footer">数据来源：腾讯财经K线 + 东方财富实时API · 三因子模型 v7.2 · 仅供学习参考，不构成投资建议</div>
+      <div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center;flex:1">${allTags}</div>
+    </div>`;
+  }).join('') || '<div style="color:var(--sub);font-size:12px;text-align:center;padding:20px">近期暂无信号事件</div>';
+}
+</script>
 
 <script>
 // ══ 数据层 ══
@@ -1534,6 +1520,7 @@ function init(){
   renderMatrix();
   renderSectorFlow();
   renderNSFlow();
+  renderTimeline();
 }
 
 init();
