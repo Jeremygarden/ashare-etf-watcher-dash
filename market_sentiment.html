@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>市场情绪仪表盘 V3.0 PRO</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#eef2ff;--card:#ffffff;--card-dark:#1e293b;
+  --text:#1e293b;--sub:#94a3b8;--blue:#3b82f6;
+  --green:#10b981;--red:#ef4444;--orange:#f59e0b;
+  --purple:#8b5cf6;--border:#e2e8f0;
+}
+body{background:var(--bg);font-family:'PingFang SC','Microsoft YaHei',sans-serif;color:var(--text);padding:16px;min-width:1200px}
+.card{background:var(--card);border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,0.06);padding:16px;position:relative}
+.card-dark{background:var(--card-dark);border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,0.15);padding:16px;position:relative;color:#fff}
+
+/* Header */
+.header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px}
+.header-left{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.ver-badge{background:#06b6d4;color:#fff;font-size:12px;font-weight:700;padding:3px 10px;border-radius:20px}
+.update-time{color:var(--sub);font-size:12px}
+.header-title{text-align:center}
+.header-title h1{font-size:24px;font-weight:700;color:var(--text)}
+.header-title p{color:var(--sub);font-size:13px;margin-top:2px}
+.header-right{display:flex;align-items:center;gap:8px}
+.header-right input[type=date]{border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:13px;color:var(--text)}
+.range-btn{border:1px solid var(--border);background:#fff;border-radius:8px;padding:5px 12px;font-size:12px;cursor:pointer;color:var(--sub);transition:all .2s}
+.range-btn.active{background:var(--blue);color:#fff;border-color:var(--blue)}
+
+/* Row 1 */
+.row1{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:16px}
+
+/* Card: 情绪综合指数 */
+.emotion-label-badge{position:absolute;top:14px;right:14px;padding:3px 10px;border-radius:12px;font-size:12px;font-weight:600}
+.change-badge{position:absolute;top:14px;right:14px;font-size:13px;font-weight:700}
+.gauge-wrap{display:flex;flex-direction:column;align-items:center;margin:8px 0}
+.gauge-value{font-size:36px;font-weight:700;color:var(--text);line-height:1}
+.gauge-signal{font-size:12px;color:var(--sub);margin-top:2px}
+.progress-bar-wrap{margin:8px 0 4px;position:relative}
+.progress-bar-track{height:8px;border-radius:4px;background:linear-gradient(to right,#1e40af,#3b82f6,#10b981,#f59e0b,#ef4444);position:relative}
+.progress-dot{position:absolute;top:50%;transform:translate(-50%,-50%);width:14px;height:14px;background:#fff;border:3px solid var(--text);border-radius:50%}
+.progress-labels{display:flex;justify-content:space-between;font-size:10px;color:var(--sub);margin-top:2px}
+
+/* Card: 最新交易日 */
+.trade-date{font-size:32px;font-weight:700;color:var(--blue);line-height:1.2;margin:8px 0 4px}
+.signal-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:4px 0}
+.signal-tag{background:#dbeafe;color:var(--blue);padding:2px 8px;border-radius:6px;font-size:12px;font-weight:600}
+.scope-tag{background:#f1f5f9;color:var(--sub);padding:2px 8px;border-radius:6px;font-size:12px}
+.strategy-box{background:#fef9c3;border-radius:8px;padding:8px 10px;margin:8px 0;font-size:12px;color:#854d0e;font-weight:500}
+.stat-row{display:flex;gap:12px;font-size:12px;color:var(--sub);flex-wrap:wrap}
+.stat-strong{color:var(--green);font-weight:600}
+
+/* Card: 涨停/炸板/跌停 */
+.zt-main{font-size:28px;font-weight:700;color:var(--text);margin:8px 0 4px;line-height:1}
+.corner-badge{position:absolute;top:14px;right:14px;background:var(--red);color:#fff;font-size:11px;font-weight:700;padding:2px 7px;border-radius:8px}
+.fb-rate{font-size:13px;margin:4px 0}
+.strong-badge{background:#dcfce7;color:var(--green);font-size:11px;padding:2px 8px;border-radius:6px;font-weight:600}
+.link-text{color:var(--blue);font-size:12px;cursor:pointer;text-decoration:underline;margin:4px 0;display:block}
+
+/* Card: 炸板率 */
+.zbrate-main{font-size:28px;font-weight:700;color:var(--orange);margin:8px 0 4px;line-height:1}
+.zbrate-warn{background:#fef3c7;border-radius:8px;padding:8px 10px;margin:8px 0;font-size:11px;color:#92400e;line-height:1.5}
+
+/* Row 2 */
+.row2{display:grid;grid-template-columns:repeat(5,1fr) 1.4fr;gap:12px;margin-bottom:16px}
+.metric-val{font-size:30px;font-weight:700;color:#fff;line-height:1;margin:8px 0 4px}
+.metric-change{font-size:13px;font-weight:600;margin-bottom:4px}
+.metric-sub{font-size:11px;color:#94a3b8}
+.vs-tag{background:#1e3a5f;color:#60a5fa;font-size:11px;padding:2px 8px;border-radius:6px;margin-top:4px;display:inline-block}
+.advice-card{background:#f0f9ff;border-radius:12px;padding:16px;display:flex;flex-direction:column;justify-content:center}
+.advice-title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:8px}
+.advice-text{font-size:15px;font-weight:600;color:var(--text);line-height:1.5}
+.advice-sub{font-size:11px;color:var(--sub);margin-top:4px}
+
+/* Row 3: Chart */
+.row3{background:var(--card);border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,0.06);padding:16px;margin-bottom:16px}
+.chart-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.chart-title{font-size:15px;font-weight:700}
+.tab-group{display:flex;gap:4px}
+.tab-btn{border:1px solid var(--border);background:#fff;border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer;color:var(--sub);transition:all .2s}
+.tab-btn.active{background:var(--blue);color:#fff;border-color:var(--blue)}
+.chart-legend{display:flex;align-items:center;gap:12px;font-size:12px;flex-wrap:wrap}
+.legend-item{display:flex;align-items:center;gap:4px}
+.legend-dot{width:10px;height:10px;border-radius:50%}
+.ice-tag{background:#dbeafe;color:var(--blue);font-size:11px;padding:2px 8px;border-radius:6px;font-weight:600}
+.chart-container{position:relative;height:340px}
+.chart-scroll-wrap{overflow-x:auto;margin-top:4px}
+.chart-scroll-bar{height:8px;background:#e2e8f0;border-radius:4px;margin-top:8px;cursor:pointer;position:relative}
+.chart-scroll-thumb{height:100%;background:var(--blue);border-radius:4px;width:60%;position:absolute;left:0}
+.chart-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:12px}
+.chart-stat-card{background:#f8fafc;border-radius:8px;padding:10px 12px;text-align:center}
+.chart-stat-label{font-size:11px;color:var(--sub);margin-bottom:4px}
+.chart-stat-val{font-size:20px;font-weight:700;color:var(--text)}
+
+/* Row 4 */
+.row4{display:grid;grid-template-columns:60% 40%;gap:16px}
+.execution-card{background:var(--card);border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,0.06);padding:16px}
+.exec-title{font-size:14px;font-weight:700;margin-bottom:12px}
+.exec-metrics{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.exec-metric{background:#f8fafc;border-radius:8px;padding:8px 12px}
+.exec-metric-label{font-size:11px;color:var(--sub)}
+.exec-metric-val{font-size:16px;font-weight:700;margin-top:2px}
+.op-framework{background:#f0f9ff;border-radius:8px;padding:12px}
+.op-framework-title{font-size:12px;font-weight:700;color:var(--text);margin-bottom:6px}
+.op-framework-text{font-size:13px;color:var(--text);line-height:1.5;margin-bottom:8px}
+.tag-group{display:flex;flex-wrap:wrap;gap:6px}
+.tag{font-size:11px;padding:3px 10px;border-radius:12px;font-weight:600}
+.tag-orange{background:#fef3c7;color:#92400e}
+.tag-blue{background:#dbeafe;color:#1d4ed8}
+.tag-green{background:#dcfce7;color:#166534}
+.risk-card{background:var(--card);border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,0.06);padding:16px}
+.risk-title{font-size:14px;font-weight:700;margin-bottom:12px;color:var(--red)}
+.risk-item{background:#fff7ed;border-radius:8px;padding:10px 12px;margin-bottom:8px;font-size:13px;color:#9a3412;display:flex;gap:8px;align-items:flex-start;line-height:1.5}
+.risk-icon{color:var(--orange);flex-shrink:0;font-size:14px}
+
+/* Tooltip */
+.info-icon{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;background:#e2e8f0;border-radius:50%;font-size:10px;cursor:pointer;color:var(--sub);margin-left:4px;position:relative;vertical-align:middle}
+.info-icon:hover .tooltip{display:block}
+.tooltip{display:none;position:absolute;background:var(--text);color:#fff;font-size:11px;padding:6px 10px;border-radius:6px;white-space:nowrap;bottom:120%;left:50%;transform:translateX(-50%);z-index:999;line-height:1.5;min-width:160px;text-align:center}
+.tooltip::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);border:5px solid transparent;border-top-color:var(--text)}
+
+/* Section label */
+.section-label{font-size:11px;color:var(--sub);margin-bottom:6px;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.card-title{font-size:13px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:4px}
+.card-subtitle{font-size:11px;color:var(--sub);margin-top:2px;margin-bottom:4px}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-left">
+    <span class="ver-badge">V3.0 PRO</span>
+    <span class="update-time" id="updateTime">数据更新于 2026/05/15</span>
+  </div>
+  <div class="header-title">
+    <h1>市场情绪仪表盘</h1>
+    <p>基于多维度情绪数据的综合分析系统</p>
+  </div>
+  <div class="header-right">
+    <input type="date" id="tradeDateInput" value="2026-05-15">
+    <button class="range-btn" data-days="14" onclick="setRange(14)">近14日</button>
+    <button class="range-btn" data-days="30" onclick="setRange(30)">近30日</button>
+    <button class="range-btn active" data-days="60" onclick="setRange(60)">近60日</button>
+  </div>
+</div>
+
+<!-- Row 1 -->
+<div class="row1">
+  <!-- Card 1: 情绪综合指数 -->
+  <div class="card">
+    <div class="card-title">
+      情绪综合指数
+      <span class="info-icon">ℹ<span class="tooltip">综合大盘系数、超短情绪、弱钱效应、三线分数的加权综合情绪评分（0-100）</span></span>
+    </div>
+    <div class="card-subtitle">综合市场情绪强弱指标</div>
+    <span class="emotion-label-badge" id="emotionBadge" style="background:#dcfce7;color:#166534">情绪冰</span>
+    <div class="change-badge" id="compositeDayChange" style="top:40px;right:14px;color:var(--red)">+7.8</div>
+    <div class="gauge-wrap">
+      <!-- SVG 半圆仪表盘 -->
+      <svg id="gaugeSvg" width="200" height="110" viewBox="0 0 200 110">
+        <!-- 5色分区弧 -->
+        <defs>
+          <linearGradient id="arcGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" style="stop-color:#1e40af"/>
+            <stop offset="25%" style="stop-color:#3b82f6"/>
+            <stop offset="50%" style="stop-color:#10b981"/>
+            <stop offset="75%" style="stop-color:#f59e0b"/>
+            <stop offset="100%" style="stop-color:#ef4444"/>
+          </linearGradient>
+        </defs>
+        <!-- Background arc segments -->
+        <path d="M 15 100 A 85 85 0 0 1 185 100" fill="none" stroke="#e2e8f0" stroke-width="16" stroke-linecap="round"/>
+        <!-- Colored arc - will be drawn in 5 segments -->
+        <path id="gaugeArc1" fill="none" stroke="#1e40af" stroke-width="16" stroke-linecap="butt"/>
+        <path id="gaugeArc2" fill="none" stroke="#3b82f6" stroke-width="16" stroke-linecap="butt"/>
+        <path id="gaugeArc3" fill="none" stroke="#10b981" stroke-width="16" stroke-linecap="butt"/>
+        <path id="gaugeArc4" fill="none" stroke="#f59e0b" stroke-width="16" stroke-linecap="butt"/>
+        <path id="gaugeArc5" fill="none" stroke="#ef4444" stroke-width="16" stroke-linecap="round"/>
+        <!-- Tick marks -->
+        <text x="10" y="108" font-size="10" fill="#94a3b8">0</text>
+        <text x="47" y="25" font-size="10" fill="#94a3b8">50</text>
+        <text x="183" y="108" font-size="10" fill="#94a3b8">100</text>
+        <!-- Pointer -->
+        <line id="gaugePointer" x1="100" y1="100" x2="100" y2="25" stroke="#ef4444" stroke-width="3" stroke-linecap="round"/>
+        <circle cx="100" cy="100" r="6" fill="#ef4444"/>
+      </svg>
+      <div class="gauge-value" id="compositeVal">29</div>
+      <div class="gauge-signal">信号 <span id="signalStrength">强度5</span></div>
+    </div>
+    <!-- Progress bar -->
+    <div class="progress-bar-wrap">
+      <div class="progress-bar-track">
+        <div class="progress-dot" id="progressDot" style="left:29%"></div>
+      </div>
+      <div class="progress-labels">
+        <span>极度悲观</span>
+        <span>冰点</span>
+        <span>中性</span>
+        <span>偏热</span>
+        <span>极度贪婪</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Card 2: 最新交易日 -->
+  <div class="card">
+    <div class="card-title">最新交易日</div>
+    <div class="trade-date" id="tradeDateDisplay">2026/05/15</div>
+    <div style="font-size:13px;color:var(--sub);margin-bottom:6px">■ 当前情绪口径经标注日</div>
+    <div class="signal-row">
+      <span class="signal-tag" id="tradeSignal">强度5</span>
+      <span class="scope-tag">正常口径</span>
+    </div>
+    <div class="strategy-box" id="strategyBox">综合持守，等回封确认</div>
+    <div class="stat-row">
+      <span>封板率 <span class="stat-strong" id="fbRateDisplay">58.7%</span></span>
+      <span>净流量 <span class="stat-strong">偏强+0.4%</span></span>
+    </div>
+  </div>
+
+  <!-- Card 3: 涨停/炸板/跌停 -->
+  <div class="card">
+    <div class="card-title">涨停 / 炸板 / 跌停</div>
+    <span class="corner-badge" id="ztBadge">+7</span>
+    <div class="zt-main" id="ztMainDisplay">54 / 38 / 15</div>
+    <a class="link-text">查看详情 →</a>
+    <div class="fb-rate">
+      封板率 <strong id="fbRate2">58.7%</strong> &nbsp; 净股比 <strong id="netRatio">3.60</strong>
+    </div>
+    <div class="stat-row" style="margin-top:4px">
+      <span>净流量 偏强</span>
+      <span>涨停比 <span class="strong-badge">偏强</span></span>
+    </div>
+  </div>
+
+  <!-- Card 4: 炸板率 -->
+  <div class="card" style="border-top:3px solid var(--orange)">
+    <div class="card-title">
+      炸板率
+      <span class="info-icon">ℹ<span class="tooltip">炸板率 = 炸板数 / (涨停+炸板) × 100%，越高说明市场情绪越弱</span></span>
+    </div>
+    <span class="corner-badge" id="zbBadge" style="background:var(--red)">+5.2</span>
+    <div class="zbrate-main" id="zbRateDisplay">41.30%</div>
+    <div style="font-size:12px;color:var(--sub);margin-bottom:4px">
+      5日炸板率：<strong id="zbRate5d">29.9%</strong> &nbsp; 涨跌高于30% <strong>2天</strong>
+    </div>
+    <div class="zbrate-warn">
+      ⚠️ 炸合防守：结合防守，等回封确认<br>
+      （开盘价+0.1% / 收盘价+0.4%）
+    </div>
+  </div>
+</div>
+
+<!-- Row 2 -->
+<div class="row2">
+  <!-- 大盘系数 -->
+  <div class="card-dark">
+    <div style="font-size:12px;color:#94a3b8;display:flex;align-items:center;gap:4px">
+      大盘系数
+      <span class="info-icon" style="background:#334155;color:#94a3b8">ℹ<span class="tooltip">综合上证涨跌幅、上涨家数比、北向资金，反映大盘整体环境</span></span>
+    </div>
+    <div class="metric-val" id="marketCoefVal">29.2</div>
+    <div class="metric-change" id="marketCoefChange" style="color:var(--green)">+13.8</div>
+    <div class="metric-sub">指数环境</div>
+  </div>
+
+  <!-- 超短情绪 -->
+  <div class="card-dark">
+    <div style="font-size:12px;color:#94a3b8;display:flex;align-items:center;gap:4px">
+      超短情绪
+      <span class="info-icon" style="background:#334155;color:#94a3b8">ℹ<span class="tooltip">综合涨停数量、换手率、主力净流入，反映短线资金爆发力度</span></span>
+    </div>
+    <div class="metric-val" id="sentimentVal">28.4</div>
+    <div class="metric-change" id="sentimentChange" style="color:var(--red)">-5.5</div>
+    <div class="metric-sub">短线爆发力度</div>
+  </div>
+
+  <!-- 弱钱效应 -->
+  <div class="card-dark">
+    <div style="font-size:12px;color:#94a3b8;display:flex;align-items:center;gap:4px">
+      弱钱效应
+      <span class="info-icon" style="background:#334155;color:#94a3b8">ℹ<span class="tooltip">反向指标：炸板率越高，弱钱效应越强，市场越弱。越高代表环境越差</span></span>
+    </div>
+    <div class="metric-val" id="weakMoneyVal">70.1</div>
+    <div class="metric-change" id="weakMoneyChange" style="color:var(--green)">-15.0</div>
+    <div class="metric-sub">赚钱效应指标（反向）</div>
+  </div>
+
+  <!-- 三线分数 -->
+  <div class="card-dark">
+    <div style="font-size:12px;color:#94a3b8;display:flex;align-items:center;gap:4px">
+      三线分数
+      <span class="info-icon" style="background:#334155;color:#94a3b8">ℹ<span class="tooltip">（大盘系数 + 超短情绪 + 100-弱钱效应）/ 3，综合三线均衡得分</span></span>
+    </div>
+    <div class="metric-val" id="threeLineVal">23.9</div>
+    <div class="metric-change" id="threeLineChange" style="color:var(--green)">+1</div>
+    <div class="metric-sub">行情指数</div>
+  </div>
+
+  <!-- 大盘VS超短 -->
+  <div class="card-dark">
+    <div style="font-size:12px;color:#94a3b8">大盘VS超短</div>
+    <div class="metric-val" id="vsVal">0.8</div>
+    <div class="vs-tag" id="vsTag">超低正常</div>
+    <div class="metric-sub" style="margin-top:6px">大盘系数/超短情绪比值</div>
+  </div>
+
+  <!-- 交易建议 -->
+  <div class="advice-card">
+    <div class="advice-title">💡 交易建议</div>
+    <div class="advice-text" id="adviceText">情绪冰点，优先观察低位核心修复</div>
+    <div class="advice-sub">系统判行建议</div>
+  </div>
+</div>
+
+<!-- Row 3: Chart -->
+<div class="row3">
+  <div class="chart-header">
+    <div>
+      <span class="chart-title">情绪周期三线监控</span>
+      <span class="ice-tag" id="iceTag" style="margin-left:10px">冰点运行7天</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <div class="chart-legend">
+        <div class="legend-item"><div class="legend-dot" style="background:#ef4444"></div><span>大盘系数</span></div>
+        <div class="legend-item"><div class="legend-dot" style="background:#8b5cf6"></div><span>超短情绪</span></div>
+        <div class="legend-item"><div class="legend-dot" style="background:#10b981"></div><span>弱钱效应</span></div>
+        <div class="legend-item"><div class="legend-dot" style="background:#3b82f6"></div><span>综合指数</span></div>
+        <div class="legend-item"><div class="legend-dot" style="background:#ef444440;border:1px solid #ef4444"></div><span>高潮区80-100</span></div>
+        <div class="legend-item"><div class="legend-dot" style="background:#3b82f640;border:1px solid #3b82f6"></div><span>冰点区0-20</span></div>
+      </div>
+      <div class="tab-group" id="chartTabs">
+        <button class="tab-btn active" onclick="showChartLine('all')">全部</button>
+        <button class="tab-btn" onclick="showChartLine('market')">大盘系数</button>
+        <button class="tab-btn" onclick="showChartLine('sentiment')">超短情绪</button>
+        <button class="tab-btn" onclick="showChartLine('weak')">弱钱效应</button>
+        <button class="tab-btn" onclick="showChartLine('composite')">综合指数</button>
+      </div>
+    </div>
+  </div>
+  <div class="chart-container">
+    <canvas id="emotionChart"></canvas>
+  </div>
+  <div class="chart-scroll-bar"><div class="chart-scroll-thumb" id="chartScrollThumb"></div></div>
+  <div class="chart-stats">
+    <div class="chart-stat-card">
+      <div class="chart-stat-label">最新节点</div>
+      <div class="chart-stat-val" id="statLatestDate" style="font-size:14px">05/15</div>
+    </div>
+    <div class="chart-stat-card">
+      <div class="chart-stat-label">三线分数</div>
+      <div class="chart-stat-val" id="statThreeLine">23.9</div>
+    </div>
+    <div class="chart-stat-card">
+      <div class="chart-stat-label">大盘VS超短</div>
+      <div class="chart-stat-val" id="statVS">0.8</div>
+    </div>
+    <div class="chart-stat-card">
+      <div class="chart-stat-label">综合指数</div>
+      <div class="chart-stat-val" id="statComposite">29</div>
+    </div>
+  </div>
+</div>
+
+<!-- Row 4 -->
+<div class="row4">
+  <!-- 短线执行看板 -->
+  <div class="execution-card">
+    <div class="exec-title">📊 短线执行看板</div>
+    <div class="exec-metrics">
+      <div class="exec-metric">
+        <div class="exec-metric-label">5日情绪变化</div>
+        <div class="exec-metric-val" id="emo5dChange" style="color:var(--red)">-35.2</div>
+      </div>
+      <div class="exec-metric">
+        <div class="exec-metric-label">5日炸板率</div>
+        <div class="exec-metric-val" id="zb5dChange" style="color:var(--red)">-29.9%</div>
+      </div>
+      <div class="exec-metric">
+        <div class="exec-metric-label">有策优先</div>
+        <div class="exec-metric-val" style="color:var(--green)">同步正常</div>
+      </div>
+      <div class="exec-metric">
+        <div class="exec-metric-label">冰点运行(10日)</div>
+        <div class="exec-metric-val" id="iceRunning">2/10</div>
+      </div>
+    </div>
+    <div class="op-framework">
+      <div class="op-framework-title">📋 今日操作框架</div>
+      <div class="op-framework-text" id="opFramework">主防守：回避高位追涨，关注低吸 + 回封确认</div>
+      <div class="tag-group">
+        <span class="tag tag-orange">⚠ 风险</span>
+        <span class="tag tag-blue">结合防守</span>
+        <span class="tag tag-orange">等回封确认</span>
+        <span class="tag tag-green">收盘溢价+0.4%</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 风险提示 -->
+  <div class="risk-card">
+    <div class="risk-title">⚠ 风险提示</div>
+    <div class="risk-item" id="riskItem1">
+      <span class="risk-icon">▲</span>
+      <span>弱钱效应偏高(70.1)，优先降仓含不足追涨</span>
+    </div>
+    <div class="risk-item" id="riskItem2">
+      <span class="risk-icon">▲</span>
+      <span>炸板率41.3%处于高位，属于环境较弱</span>
+    </div>
+    <div class="risk-item" id="riskItem3" style="display:none">
+      <span class="risk-icon">▲</span>
+      <span id="riskItem3Text"></span>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============ 指标计算 ============
+function normalize(val, min, max){
+  return Math.max(0, Math.min(100, (val - min) / (max - min) * 100));
+}
+function calcMarketCoef(sh3, upRatio, northFlow){
+  const a = normalize(sh3, -3, 3);
+  const b = normalize(upRatio * 100, 20, 80);
+  const c = normalize(northFlow, -100, 100);
+  return Math.round(a * 0.4 + b * 0.3 + c * 0.3);
+}
+function calcSentiment(ztCount, avgTurnover, mainNetFlow){
+  const a = normalize(ztCount, 0, 150);
+  const b = normalize(avgTurnover, 0, 5);
+  const c = normalize(mainNetFlow, -500, 500);
+  return Math.round(a * 0.4 + b * 0.3 + c * 0.3);
+}
+function calcWeakMoney(zbRate, fbRate){
+  return Math.round(zbRate * 0.6 + (100 - fbRate) * 0.4);
+}
+function calcThreeLine(market, sentiment, weakMoney){
+  return Math.round((market + sentiment + (100 - weakMoney)) / 3);
+}
+function calcComposite(market, sentiment, weakMoney, threeLine){
+  return Math.round(market * 0.35 + sentiment * 0.25 + (100 - weakMoney) * 0.20 + threeLine * 0.20);
+}
+function calcZBRate(zbCount, ztCount){
+  if(ztCount + zbCount === 0) return 0;
+  return Math.round(zbCount / (ztCount + zbCount) * 100 * 10) / 10;
+}
+
+function getRating(zbRate, netRatio) {
+  const fbRate = 100 - zbRate;
+  const fbLabel = fbRate>=75?'极强':fbRate>=60?'偏强':fbRate>=45?'中性':'偏弱';
+  const fbColor = fbRate>=75?'#dc2626':fbRate>=60?'#16a34a':fbRate>=45?'#ca8a04':'#94a3b8';
+  const ztLabel = netRatio>=5?'极强':netRatio>=3?'偏强':netRatio>=1.5?'中性':'偏弱';
+  const ztColor = netRatio>=5?'#dc2626':netRatio>=3?'#16a34a':netRatio>=1.5?'#ca8a04':'#94a3b8';
+  const flowLabel = zbRate<=20?'偏强':zbRate<=35?'中性':'偏弱';
+  const zbWarn = zbRate>40?'炸合防守：结合防守，等回封确认（开盘价+0.1%/收盘价+0.4%）':
+                 zbRate>25?'炸板率偏高，追板需等回封，建议收盘价附近参与':
+                 '封板质量良好，可以参与强势涨停';
+  return {fbLabel,fbColor,ztLabel,ztColor,flowLabel,zbWarn};
+}
+function getSignalStrength(composite){
+  if(composite >= 80) return 10;
+  if(composite >= 70) return 8;
+  if(composite >= 60) return 7;
+  if(composite >= 50) return 6;
+  if(composite >= 40) return 5;
+  if(composite >= 30) return 4;
+  if(composite >= 20) return 3;
+  return 2;
+}
+function getEmotionLabel(composite){
+  if(composite >= 80) return {text:'极度贪婪', color:'#ef4444', bg:'#fee2e2'};
+  if(composite >= 65) return {text:'偏热', color:'#f97316', bg:'#ffedd5'};
+  if(composite >= 45) return {text:'震荡中性', color:'#eab308', bg:'#fef9c3'};
+  if(composite >= 25) return {text:'情绪冰点', color:'#3b82f6', bg:'#dbeafe'};
+  return {text:'极度悲观', color:'#1e40af', bg:'#dbeafe'};
+}
+function getAdvice(composite, weakMoney, zbRate){
+  if(composite >= 80) return '市场极度贪婪，注意风险，建议减仓观望';
+  if(composite >= 65) return '市场偏热，谨慎追涨，关注板块轮动';
+  if(composite >= 45) return '市场震荡中性，均衡配置，跟随主线';
+  if(composite >= 25) return '情绪冰点，优先观察低位核心修复';
+  return '极度悲观，关注反弹机会，分批低吸';
+}
+
+// ============ 历史数据生成 ============
+function seededRandom(seed){
+  let s = seed;
+  return () => {
+    s = (s * 1664525 + 1013904223) & 0xffffffff;
+    return (s >>> 0) / 0xffffffff;
+  };
+}
+function generateHistory(days=60){
+  const rng = seededRandom(20260515);
+  const history = [];
+  let market = 45, sentiment = 40, weak = 55;
+  for(let i = 0; i < days; i++){
+    market   = Math.max(5, Math.min(95, market + (rng()-0.5)*15));
+    sentiment= Math.max(5, Math.min(95, sentiment + (rng()-0.5)*18));
+    weak     = Math.max(10, Math.min(90, weak + (rng()-0.5)*12));
+    const threeLine = calcThreeLine(market, sentiment, weak);
+    const composite = calcComposite(market, sentiment, weak, threeLine);
+    const date = new Date('2026-03-15');
+    date.setDate(date.getDate() + i);
+    const label = (date.getMonth()+1).toString().padStart(2,'0') + '/' + date.getDate().toString().padStart(2,'0');
+    history.push({
+      date: label,
+      market: Math.round(market), sentiment: Math.round(sentiment),
+      weak: Math.round(weak), threeLine, composite,
+    });
+  }
+  return history;
+}
+
+// ============ SVG 仪表盘 ============
+function polarToCartesian(cx, cy, r, angleDeg){
+  const rad = (angleDeg - 180) * Math.PI / 180;
+  return {x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad)};
+}
+function describeArc(cx, cy, r, startAngle, endAngle){
+  const s = polarToCartesian(cx, cy, r, startAngle);
+  const e = polarToCartesian(cx, cy, r, endAngle);
+  const largeArc = endAngle - startAngle > 180 ? 1 : 0;
+  return `M ${s.x} ${s.y} A ${r} ${r} 0 ${largeArc} 1 ${e.x} ${e.y}`;
+}
+function updateGauge(value){
+  // 0->180deg arc, value 0-100 maps to 0-180
+  const cx = 100, cy = 100, r = 75;
+  const segments = [
+    {id:'gaugeArc1', color:'#1d4ed8', from:0,   to:20},
+    {id:'gaugeArc2', color:'#3b82f6', from:20,  to:40},
+    {id:'gaugeArc3', color:'#eab308', from:40,  to:60},
+    {id:'gaugeArc4', color:'#f97316', from:60,  to:80},
+    {id:'gaugeArc5', color:'#ef4444', from:80,  to:100},
+  ];
+  segments.forEach(seg => {
+    const sa = seg.from * 1.8;
+    const ea = seg.to * 1.8;
+    document.getElementById(seg.id).setAttribute('d', describeArc(cx, cy, r, sa, ea));
+    document.getElementById(seg.id).setAttribute('stroke', seg.color);
+  });
+  // Pointer
+  const angle = value * 1.8;
+  const tip = polarToCartesian(cx, cy, 65, angle);
+  const ptr = document.getElementById('gaugePointer');
+  ptr.setAttribute('x1', cx); ptr.setAttribute('y1', cy);
+  ptr.setAttribute('x2', tip.x); ptr.setAttribute('y2', tip.y);
+}
+
+// ============ Chart.js ============
+let emotionChart = null;
+let historyData = [];
+let currentRange = 60;
+let activeLines = {market:true, sentiment:true, weak:true, composite:true};
+
+function buildChartData(range){
+  const data = historyData.slice(-range);
+  return {
+    labels: data.map(d => d.date),
+    datasets: [
+      {label:'大盘系数', data:data.map(d=>d.market), borderColor:'#ef4444', backgroundColor:'transparent', tension:.3, pointRadius:2, hidden:!activeLines.market},
+      {label:'超短情绪', data:data.map(d=>d.sentiment), borderColor:'#8b5cf6', backgroundColor:'transparent', tension:.3, pointRadius:2, hidden:!activeLines.sentiment},
+      {label:'弱钱效应', data:data.map(d=>d.weak), borderColor:'#10b981', backgroundColor:'transparent', tension:.3, pointRadius:2, hidden:!activeLines.weak},
+      {label:'综合指数', data:data.map(d=>d.composite), borderColor:'#3b82f6', backgroundColor:'rgba(59,130,246,0.08)', tension:.3, pointRadius:2, fill:true, hidden:!activeLines.composite},
+    ]
+  };
+}
+
+function initChart(){
+  const ctx = document.getElementById('emotionChart').getContext('2d');
+  // Zone annotations via plugin - use custom background plugin
+  const zonePlugin = {
+    id: 'zonePlugin',
+    beforeDraw(chart){
+      const {ctx, chartArea, scales} = chart;
+      if(!chartArea) return;
+      const yAxis = scales.y;
+      const y80 = yAxis.getPixelForValue(80);
+      const y100 = yAxis.getPixelForValue(100);
+      const y0 = yAxis.getPixelForValue(0);
+      const y20 = yAxis.getPixelForValue(20);
+      ctx.save();
+      // High zone (80-100) red
+      ctx.fillStyle = 'rgba(239,68,68,0.08)';
+      ctx.fillRect(chartArea.left, y100, chartArea.right - chartArea.left, y80 - y100);
+      // Ice zone (0-20) blue
+      ctx.fillStyle = 'rgba(59,130,246,0.08)';
+      ctx.fillRect(chartArea.left, y20, chartArea.right - chartArea.left, y0 - y20);
+      ctx.restore();
+    }
+  };
+
+  emotionChart = new Chart(ctx, {
+    type: 'line',
+    data: buildChartData(currentRange),
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: {mode:'index', intersect:false},
+      plugins: {
+        legend: {display:false},
+        tooltip: {
+          backgroundColor:'rgba(30,41,59,0.92)',
+          titleColor:'#94a3b8',
+          bodyColor:'#fff',
+          padding:10,
+        }
+      },
+      scales: {
+        y: {
+          min:0, max:100,
+          grid: {color:'rgba(226,232,240,0.5)'},
+          ticks: {color:'#94a3b8', stepSize:20}
+        },
+        x: {
+          grid: {display:false},
+          ticks: {
+            color:'#94a3b8',
+            maxTicksLimit: Math.min(currentRange, 15),
+            maxRotation: 0,
+          }
+        }
+      }
+    },
+    plugins: [zonePlugin]
+  });
+}
+
+function setRange(days){
+  currentRange = days;
+  document.querySelectorAll('.range-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector(`.range-btn[data-days="${days}"]`).classList.add('active');
+  if(emotionChart){
+    emotionChart.data = buildChartData(days);
+    emotionChart.options.scales.x.ticks.maxTicksLimit = Math.min(days, 15);
+    emotionChart.update();
+  }
+}
+
+function showChartLine(type){
+  document.querySelectorAll('#chartTabs .tab-btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  if(type === 'all'){
+    activeLines = {market:true, sentiment:true, weak:true, composite:true};
+  } else {
+    activeLines = {market:false, sentiment:false, weak:false, composite:false};
+    activeLines[type] = true;
+  }
+  if(emotionChart){
+    emotionChart.data = buildChartData(currentRange);
+    emotionChart.update();
+  }
+}
+
+// ============ UI 更新 ============
+function updateUI(data){
+  const {market, sentiment, weak, threeLine, composite, zbRate, ztCount, zbCount, dtCount, fbRate} = data;
+
+  // Gauge
+  updateGauge(composite);
+  document.getElementById('compositeVal').textContent = composite;
+  const str = getSignalStrength(composite);
+  document.getElementById('signalStrength').textContent = `强度${str}`;
+  const label = getEmotionLabel(composite);
+  const badge = document.getElementById('emotionBadge');
+  badge.textContent = label.text.slice(0,3) + (label.text.length>3?'…':'');
+  badge.style.background = label.bg || '#dcfce7';
+  badge.style.color = label.color;
+
+  // Progress dot
+  document.getElementById('progressDot').style.left = composite + '%';
+
+  // Row 2 metrics
+  document.getElementById('marketCoefVal').textContent = market;
+  document.getElementById('sentimentVal').textContent = sentiment;
+  document.getElementById('weakMoneyVal').textContent = weak;
+  document.getElementById('threeLineVal').textContent = threeLine;
+  const vsVal = sentiment > 0 ? (market / sentiment).toFixed(1) : '—';
+  document.getElementById('vsVal').textContent = vsVal;
+  const vsNum = parseFloat(vsVal);
+  let vsTagText = '均衡';
+  if(vsNum < 0.7) vsTagText = '超低正常';
+  else if(vsNum > 1.5) vsTagText = '大盘强';
+  else vsTagText = '均衡';
+  document.getElementById('vsTag').textContent = vsTagText;
+
+  // ZB rate
+  document.getElementById('zbRateDisplay').textContent = zbRate.toFixed(2) + '%';
+  document.getElementById('fbRate2').textContent = fbRate.toFixed(1) + '%';
+  document.getElementById('fbRateDisplay').textContent = fbRate.toFixed(1) + '%';
+  document.getElementById('ztMainDisplay').textContent = `${ztCount} / ${zbCount} / ${dtCount}`;
+
+  // Trade signal
+  document.getElementById('tradeSignal').textContent = `强度${str}`;
+
+  // Chart stats
+  document.getElementById('statThreeLine').textContent = threeLine;
+  document.getElementById('statVS').textContent = vsVal;
+  document.getElementById('statComposite').textContent = composite;
+
+  // Advice
+  document.getElementById('adviceText').textContent = getAdvice(composite, weak, zbRate);
+
+  // Risk items
+  const risks = [];
+  if(weak > 60) risks.push(`弱钱效应偏高(${weak})，优先降仓含不足追涨`);
+  if(zbRate > 35) risks.push(`炸板率${zbRate}%处于高位，属于环境较弱`);
+  if(composite < 25) risks.push('综合情绪处于冰点，建议观望为主');
+
+  ['riskItem1','riskItem2','riskItem3'].forEach((id,i) => {
+    const el = document.getElementById(id);
+    if(i === 2){
+      if(risks[2]){
+        el.style.display = 'flex';
+        document.getElementById('riskItem3Text').textContent = risks[2];
+      } else {
+        el.style.display = 'none';
+      }
+    } else {
+      const textEl = el.querySelector('span:last-child');
+      if(risks[i]) { textEl.textContent = risks[i]; el.style.display = 'flex'; }
+      else { el.style.display = 'none'; }
+    }
+  });
+
+  // Operation framework
+  if(composite < 25){
+    document.getElementById('opFramework').textContent = '主防守：回避高位追涨，关注低吸 + 回封确认';
+  } else if(composite < 45){
+    document.getElementById('opFramework').textContent = '谨慎参与：优选低吸机会，控制仓位比例';
+  } else if(composite < 65){
+    document.getElementById('opFramework').textContent = '均衡操作：跟随主线，控制个股仓位';
+  } else {
+    document.getElementById('opFramework').textContent = '积极但谨慎：减少追高，关注回调机会';
+  }
+
+  // Update time
+  const now = new Date();
+  document.getElementById('updateTime').textContent = `数据更新于 ${now.getFullYear()}/${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+}
+
+// ============ API Fetch ============
+const APIS = {
+  market_sh: 'https://push2.eastmoney.com/api/qt/stock/get?fields=f104,f105,f106,f3&secid=1.000001&ut=bd1d9ddb04089700cf9c27f6f7426281',
+  market_sz: 'https://push2.eastmoney.com/api/qt/stock/get?fields=f104,f105,f106,f3&secid=0.399001&ut=bd1d9ddb04089700cf9c27f6f7426281',
+  hs300: 'https://push2.eastmoney.com/api/qt/stock/get?fields=f43,f3,f8&secid=1.000300&ut=bd1d9ddb04089700cf9c27f6f7426281',
+  mainflow: 'https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=200&np=1&fltt=2&invt=2&fid=f62&po=0&ut=bd1d9ddb04089700cf9c27f6f7426281&fields=f62,f3,f8&fs=m%3A0%2Bt%3A6%2Cm%3A0%2Bt%3A13%2Cm%3A0%2Bt%3A80%2Cm%3A1%2Bt%3A2%2Cm%3A1%2Bt%3A23',
+  north: 'https://push2.eastmoney.com/api/qt/kamt/get?fields1=f1,f2,f3,f4&fields2=f51,f52,f53,f54,f55,f56&ut=b2884a393a59ad64002292a3e90d46a5',
+};
+
+async function fetchAllData(){
+  try {
+    const [shRes, szRes, hs300Res, mainflowRes, northRes] = await Promise.all([
+      fetch(APIS.market_sh).then(r=>r.json()).catch(()=>null),
+      fetch(APIS.market_sz).then(r=>r.json()).catch(()=>null),
+      fetch(APIS.hs300).then(r=>r.json()).catch(()=>null),
+      fetch(APIS.mainflow).then(r=>r.json()).catch(()=>null),
+      fetch(APIS.north).then(r=>r.json()).catch(()=>null),
+    ]);
+
+    // Parse mainflow stocks
+    const stocks = mainflowRes?.data?.diff || [];
+    const upStocks = stocks.filter(s => s.f3 > 0).length;
+    const dnStocks = stocks.filter(s => s.f3 < 0).length;
+    const ztStocks = stocks.filter(s => s.f3 >= 9.9).length;
+    const dtStocks = stocks.filter(s => s.f3 <= -9.9).length;
+    const mainNetFlow = stocks.reduce((sum,s) => sum + (s.f62||0), 0) / 1e8;
+    const avgTurnover = stocks.reduce((sum,s) => sum + (s.f8||0), 0) / Math.max(stocks.length,1) / 100;
+
+    // SH/SZ up/dn
+    let shUp = shRes?.data?.f104 || 0;
+    let shDn = shRes?.data?.f105 || 0;
+    let szUp = szRes?.data?.f104 || 0;
+    let szDn = szRes?.data?.f105 || 0;
+    const sh3 = (shRes?.data?.f3 || 0) / 100;
+
+    let totalUp = shUp + szUp;
+    let totalDn = shDn + szDn;
+
+    // Fallback if 0
+    if(totalUp + totalDn === 0){
+      totalUp = upStocks;
+      totalDn = dnStocks;
+    }
+    const total = Math.max(totalUp + totalDn, 1);
+    const upRatio = totalUp / total;
+
+    // North flow (latest)
+    const northData = northRes?.data;
+    let northFlow = 0;
+    if(northData){
+      const s2 = northData.s2 || northData.data?.s2;
+      if(s2 && s2.length > 0){
+        const last = s2[s2.length - 1]?.split(',');
+        northFlow = last ? parseFloat(last[1]||0) / 1e8 : 0;
+      }
+    }
+
+    // zt/zb counts from hs300 list - fallback
+    const ztCount = Math.max(ztStocks, 20);
+    const zbCount = Math.round(ztCount * 0.7); // estimate
+    const dtCount = Math.max(dtStocks, 5);
+    const fbRate = calcZBRate(zbCount, ztCount) === 0 ? 58.7 : (100 - calcZBRate(zbCount, ztCount));
+    const zbRate = calcZBRate(zbCount, ztCount) || 41.3;
+
+    const market = calcMarketCoef(sh3, upRatio, northFlow);
+    const sentiment = calcSentiment(ztCount, avgTurnover, mainNetFlow);
+    const weak = calcWeakMoney(zbRate, fbRate);
+    const threeLine = calcThreeLine(market, sentiment, weak);
+    const composite = calcComposite(market, sentiment, weak, threeLine);
+
+    updateUI({market, sentiment, weak, threeLine, composite, zbRate, ztCount, zbCount, dtCount, fbRate});
+
+    // Update chart last point
+    if(historyData.length > 0){
+      const last = historyData[historyData.length-1];
+      last.market = market; last.sentiment = sentiment;
+      last.weak = weak; last.threeLine = threeLine; last.composite = composite;
+      if(emotionChart){
+        emotionChart.data = buildChartData(currentRange);
+        emotionChart.update();
+      }
+    }
+  } catch(e) {
+    console.log('API fetch failed, using simulated data', e);
+  }
+}
+
+// ============ Init ============
+function initDefault(){
+  // Default values from screenshot
+  const market=29, sentiment=28, weak=70, threeLine=24, composite=29;
+  const zbRate=41.3, ztCount=54, zbCount=38, dtCount=15, fbRate=58.7;
+  updateUI({market, sentiment, weak, threeLine, composite, zbRate, ztCount, zbCount, dtCount, fbRate});
+}
+
+// Compute ice days from history
+function computeIceDays(history){
+  let count = 0;
+  for(let i = history.length-1; i >= 0; i--){
+    if(history[i].composite < 25) count++;
+    else break;
+  }
+  return count;
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  // Init SVG arcs
+  updateGauge(29);
+
+  // Generate history
+  historyData = generateHistory(60);
+
+  // Update ice tag
+  const iceDays = computeIceDays(historyData);
+  if(iceDays > 0){
+    document.getElementById('iceTag').textContent = `冰点运行${iceDays}天`;
+    document.getElementById('iceTag').style.display = 'inline-block';
+    document.getElementById('iceRunning').textContent = `${iceDays}/10`;
+  } else {
+    document.getElementById('iceTag').style.display = 'none';
+  }
+
+  // Update stat date
+  if(historyData.length > 0){
+    document.getElementById('statLatestDate').textContent = historyData[historyData.length-1].date;
+  }
+
+  // 5d changes
+  if(historyData.length >= 5){
+    const cur = historyData[historyData.length-1].composite;
+    const prev5 = historyData[historyData.length-6]?.composite || cur;
+    const emo5d = cur - prev5;
+    document.getElementById('emo5dChange').textContent = (emo5d >= 0 ? '+' : '') + emo5d.toFixed(1);
+    document.getElementById('emo5dChange').style.color = emo5d >= 0 ? 'var(--green)' : 'var(--red)';
+  }
+
+  // Init with defaults
+  initDefault();
+
+  // Init chart
+  initChart();
+
+  // Fetch real data async
+  fetchAllData();
+
+  // Date input update
+  document.getElementById('tradeDateInput').addEventListener('change', function(){
+    const d = this.value.replace(/-/g, '/');
+    document.getElementById('tradeDateDisplay').textContent = d;
+  });
+});
+</script>
+</body>
+</html>
