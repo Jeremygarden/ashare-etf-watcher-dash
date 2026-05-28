@@ -43,9 +43,10 @@ def generate():
     # 1. 指数
     print("  📊 获取指数数据...")
     indices = {
-        "hs300": fetch_index_chg("000300"),
-        "sz50":  fetch_index_chg("000016"),
-        "cyb":   fetch_index_chg("399006"),
+        "sh001": fetch_index_chg("000001"),   # 上证指数
+        "hs300": fetch_index_chg("000300"),   # 沪深300
+        "sz50":  fetch_index_chg("000016"),   # 上证50
+        "cyb":   fetch_index_chg("399006"),   # 创业板综
     }
     print(f"     沪深300: {indices['hs300']['chg']:+.2f}%  上证50: {indices['sz50']['chg']:+.2f}%")
 
