@@ -125,14 +125,28 @@ def generate():
             cp = round(vp*0.7 + dp*0.3, 1)
 
         # 把近240日K线也打进去（用于柱状图）
-        # 构建 klines，加入份额历史 s 字段（用于基金规模折线图）
-        _shares_map = shares_history  # 借用已加载的历史
+        # 构建 klines，加入份额历史 s 字段 + 历史 CP 值（用于矩阵）
+        _shares_map = shares_history
+        # 计算历史三因子 CP（用于近20日信号矩阵）
+        # 构建 shares_map 用于 analyze_all（格式：{code: {date: {shares_yi,...}}}）
+        _sm = {}
+        for _date, _entries in shares_history.items():
+            if isinstance(_entries, dict) and code in _entries:
+                if code not in _sm: _sm[code] = {}
+                t_sh2, p_sh2, d_yi2, d_pct2 = etf.get_historical_share(code, _date, shares_history)
+                _sm[code][_date] = {"shares_yi": _entries[code].get("shares_yi"), "delta_yi": d_yi2, "delta_pct": d_pct2}
+        _hist_results = etf.analyze_all(klines, idx_300_data or [], _sm, "", 240)
+        _cp_map = {h["d"]: {"cp": h["cp"], "vp": h["vp"], "dp": h["dp"], "sp": h["sp"]} for h in _hist_results}
+
         klines_short = []
         for k in klines[-240:]:
             entry = {"date":k["date"],"c":round(k["c"],4),"v":k["v"]}
             day_shares = _shares_map.get(k["date"],{})
             if isinstance(day_shares, dict) and code in day_shares:
                 entry["s"] = round(day_shares[code].get("shares_yi",0), 4)
+            if k["date"] in _cp_map:
+                entry["cp"] = _cp_map[k["date"]]["cp"]
+                entry["vp"] = _cp_map[k["date"]]["vp"]
             klines_short.append(entry)
 
         shares_val = sh["shares_yi"] if sh else (t_sh or 0)
