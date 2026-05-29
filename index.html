@@ -1526,19 +1526,10 @@ function setRefreshLoading(loading){
 }
 
 async function refreshData(){
+  // Data is baked into HTML by GitHub Actions (every 30min during market hours).
+  // Reload the page to get the latest version; browser cache is bypassed via ?t=.
   setRefreshLoading(true);
-  try{
-    const res = await fetch('/etf_data.json?t=' + Date.now());
-    if(!res.ok) throw new Error('no data');
-    const data = await res.json();
-    if(!data || !data.etfs) throw new Error('invalid');
-    BACKEND = data;
-    init();
-  }catch(e){
-    showToast('暂无新数据');
-  }finally{
-    setRefreshLoading(false);
-  }
+  window.location.href = window.location.pathname + '?t=' + Date.now();
 }
 
 // ══ 初始化 ══
@@ -1615,7 +1606,8 @@ function init(){
 }
 
 init();
-setInterval(refreshData, 30*60*1000);
+// Auto-reload page every 31 minutes so GitHub Actions refresh (every 30min) is picked up automatically
+setInterval(() => { window.location.href = window.location.pathname + '?t=' + Date.now(); }, 31 * 60 * 1000);
 </script>
 </body>
 </html>
