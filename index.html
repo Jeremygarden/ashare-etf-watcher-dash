@@ -197,7 +197,7 @@ body.dark .shares-title-row{background:rgba(0,0,0,.15)}
 .cp-title{font-size:13px;font-weight:700}
 .cp-chart{padding:4px 16px 0;height:auto}
 .chart-wrap{position:relative;height:auto;overflow:visible}
-.bar-chart{display:flex;align-items:flex-end;gap:2px;height:110px;padding-bottom:0}
+.bar-chart{display:flex;align-items:flex-end;gap:2px;height:140px;padding-bottom:0;overflow:hidden}
 .bar-wrap{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer}
 .bar{border-radius:3px 3px 0 0;width:100%;min-width:8px;transition:all .2s;position:relative}
 .bar.normal{background:#d9e6f7}
@@ -1055,12 +1055,17 @@ function renderVolChart(code){
 
   chart.innerHTML = klines.map((k,i)=>{
     const v = k.v/10000;
-    const h = Math.max(3, Math.round((v/maxVol)*140));
+    // Use container height for adaptive scaling — never overflow
+    const chartH = chart.clientHeight || 140;
+    const h = Math.max(2, Math.round((v/maxVol)*(chartH - 2)));
     const isSignal = (d.cp||0)>=70 && i===klines.length-1;
     const isActive = maVol>0 && v/maVol>=1.5;
     const cls = isSignal?"bar signal":isActive?"bar active":"bar normal";
     const daysAgo = klines.length-1-i;
-    const lbl = k.date ? k.date.slice(5) : (daysAgo===0?"今":"D-"+(daysAgo+1));
+    // Adaptive label: show every N bars depending on period to avoid overlap
+    const labelEvery = volPeriod <= 20 ? 1 : volPeriod <= 60 ? 5 : volPeriod <= 120 ? 10 : 20;
+    const showLabel = (i % labelEvery === 0) || i === klines.length - 1;
+    const lbl = showLabel ? (k.date ? k.date.slice(5) : (daysAgo===0?"今":"D-"+(daysAgo+1))) : "";
     return `<div class="bar-wrap">
       <div class="${cls}" style="height:${h}px">
         <div class="bar-tooltip">${k.date||""}<br>${v.toFixed(0)}万手 (${(maVol>0?v/maVol:0).toFixed(2)}x均量)</div>
