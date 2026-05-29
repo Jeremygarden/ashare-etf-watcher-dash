@@ -6,5 +6,6 @@ etf_data.json
 .env
 *.json
 !package.json
+!shares_history.json
 .vercel
 

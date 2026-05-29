@@ -33,13 +33,56 @@ jobs:
           cd $GITHUB_WORKSPACE/scripts
           python3 gen_dashboard.py
 
+      - name: Update shares_history.json from new index.html
+        run: |
+          python3 - <<'EOF'
+          import re, json, os
+
+          def merge_shares(repo_root):
+              sh_path = os.path.join(repo_root, "shares_history.json")
+              idx_path = os.path.join(repo_root, "index.html")
+              
+              # Load existing
+              try:
+                  with open(sh_path) as f:
+                      history = json.load(f)
+              except Exception:
+                  history = {}
+              
+              # Extract s fields from newly generated index.html
+              with open(idx_path) as f:
+                  html = f.read()
+              m = re.search(r'let BACKEND = (\{.*?\});', html, re.DOTALL)
+              if not m:
+                  print("No BACKEND found in index.html")
+                  return
+              backend = json.loads(m.group(1))
+              
+              new_entries = 0
+              for code, etf_data in backend.get("etfs", {}).items():
+                  for kl in etf_data.get("klines", []):
+                      if "s" in kl and kl["s"]:
+                          d = kl["date"]
+                          if d not in history:
+                              history[d] = {}
+                          if code not in history[d]:
+                              history[d][code] = {"shares_yi": kl["s"]}
+                              new_entries += 1
+              
+              with open(sh_path, "w") as f:
+                  json.dump(history, f, ensure_ascii=False, indent=2)
+              print(f"shares_history.json updated: +{new_entries} new entries, {len(history)} dates total")
+
+          merge_shares(os.environ.get("GITHUB_WORKSPACE", "."))
+          EOF
+
       - name: Commit and push if changed
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add index.html
+          git add index.html shares_history.json
           if git diff --staged --quiet; then
-            echo "No changes to index.html — skipping commit"
+            echo "No changes — skipping commit"
           else
             TIMESTAMP=$(TZ='Asia/Shanghai' date '+%Y-%m-%d %H:%M CST')
             git commit -m "chore: auto-refresh dashboard ${TIMESTAMP}"
