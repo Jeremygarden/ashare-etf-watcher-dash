@@ -14,8 +14,20 @@ if _SCRIPT_DIR not in sys.path:
 import etf_v7_threefactor as etf
 
 WORKSPACE    = etf.WORKSPACE
-TEMPLATE_IN  = os.path.join(os.path.dirname(_SCRIPT_DIR), "workspace", "etf_dashboard.html")
-OUTPUT_HTML  = os.path.join(WORKSPACE, "etf_dashboard.html")
+_REPO_ROOT   = os.path.dirname(_SCRIPT_DIR)   # scripts/../  = repo root
+
+# Template search order:
+#   1. repo root index.html  (GitHub Pages source of truth)
+#   2. repo root etf_dashboard.html
+#   3. ~/.etf-skill/workspace/etf_dashboard.html  (local dev fallback)
+TEMPLATE_IN  = os.path.join(_REPO_ROOT, "index.html")
+
+# Output: if ETF_WORKSPACE is set to repo root (CI), write index.html directly
+_ci_workspace = os.environ.get("ETF_WORKSPACE", "")
+if _ci_workspace and os.path.isdir(_ci_workspace):
+    OUTPUT_HTML = os.path.join(_ci_workspace, "index.html")
+else:
+    OUTPUT_HTML = os.path.join(WORKSPACE, "etf_dashboard.html")
 
 # ── 取指数数据 ──
 def fetch_index_chg(bare_code):
@@ -187,11 +199,12 @@ def generate():
         "ns_flow":     ns_flow,
     }, ensure_ascii=False)
 
-    # 读取模板（优先用 workspace，否则用脚本同级目录）
+    # 读取模板（优先用 repo root index.html，其次本地路径）
     candidates = [
-        TEMPLATE_IN,
-        os.path.join(_SCRIPT_DIR, "..", "workspace", "etf_dashboard.html"),
-        os.path.join(WORKSPACE, "etf_dashboard.html"),
+        TEMPLATE_IN,                                                          # repo root index.html
+        os.path.join(_REPO_ROOT, "etf_dashboard.html"),                      # repo root etf_dashboard.html
+        os.path.join(_SCRIPT_DIR, "..", "workspace", "etf_dashboard.html"),  # local workspace
+        os.path.join(WORKSPACE, "etf_dashboard.html"),                       # etf skill workspace
     ]
     template = None
     for path in candidates:
