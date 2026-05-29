@@ -65,6 +65,36 @@ def generate():
     # 2. ETF数据（K线+份额）
     print("  📈 获取ETF行情+份额...")
     shares_history = etf.load_shares_history()
+
+    # ── Bootstrap shares_history from existing index.html when local DB is absent ──
+    # In CI (GitHub Actions), SHARES_OUT does not exist. We recover historical `s`
+    # fields embedded in the previously generated index.html so the shares line
+    # in the chart is not wiped on every refresh.
+    if not shares_history:
+        print("  ℹ️  本地份额DB为空，尝试从已有 index.html 恢复历史份额数据...")
+        _template_path = TEMPLATE_IN  # set earlier in the module scope
+        if os.path.exists(_template_path):
+            try:
+                import re as _re
+                with open(_template_path, "r", encoding="utf-8") as _f:
+                    _html = _f.read()
+                # Extract the BACKEND JSON blob from the HTML
+                _m = _re.search(r'let BACKEND = (\{.*?\});', _html, _re.DOTALL)
+                if _m:
+                    _backend = json.loads(_m.group(1))
+                    _recovered = 0
+                    for _code, _etf_data in _backend.get("etfs", {}).items():
+                        for _kl in _etf_data.get("klines", []):
+                            if "s" in _kl and _kl["s"]:
+                                _date = _kl["date"]
+                                if _date not in shares_history:
+                                    shares_history[_date] = {}
+                                if _code not in shares_history[_date]:
+                                    shares_history[_date][_code] = {"shares_yi": _kl["s"]}
+                                    _recovered += 1
+                    print(f"  ✅ 从 index.html 恢复了 {_recovered} 条历史份额记录")
+            except Exception as _e:
+                print(f"  ⚠️  份额恢复失败: {_e}")
     idx_300_data   = etf.fetch("sh000300", 240)     # 复用主脚本 fetch（加前缀兼容）
     idx_300_data   = etf.fetch("000300", 240)
 
