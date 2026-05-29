@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-05-28T16:04:15.052115",
-  "days": 15,
+  "generated_at": "2026-05-29T13:30:09.100358",
+  "days": 16,
   "history": [
     {
       "date": "05/08",
@@ -406,7 +406,34 @@
         "index": "tencent",
         "breadth": "neutral_default"
       }
+    },
+    {
+      "date": "05/29",
+      "date_full": "2026-05-29",
+      "sh_chg": -0.73,
+      "sh_close": 4068.57,
+      "zt_count": 49,
+      "zb_count": 38,
+      "dt_count": 50,
+      "zb_rate": 43.7,
+      "fb_rate": 56.3,
+      "net_ratio": 0.98,
+      "up_ratio": 0.47,
+      "north_yi": 0.0,
+      "main_net_yi": -3843.9,
+      "avg_turnover": 23.81,
+      "market": 39,
+      "sentiment": 43,
+      "weak": 72,
+      "three_line": 37,
+      "composite": 37,
+      "label": "情绪冰点",
+      "_src": {
+        "limitup": "akshare",
+        "index": "tencent",
+        "breadth": "sample_extrapolate"
+      }
     }
   ],
-  "_note": "真实数据(akshare+腾讯K线)，无随机模拟。上涨比/北向/净流入在盘后默认中性值，每日16:30运行可获取实时值。"
+  "_note": "真实数据，无随机模拟。"
 }
