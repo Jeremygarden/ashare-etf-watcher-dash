@@ -173,7 +173,7 @@ body{background:var(--bg);font-family:'PingFang SC','Microsoft YaHei',sans-serif
           </linearGradient>
         </defs>
         <!-- Background arc segments -->
-        <path d="M 15 100 A 85 85 0 0 1 185 100" fill="none" stroke="#e2e8f0" stroke-width="16" stroke-linecap="round"/>
+        <path d="M 25 100 A 75 75 0 0 1 175 100" fill="none" stroke="#e2e8f0" stroke-width="16" stroke-linecap="round"/>
         <!-- Colored arc - will be drawn in 5 segments -->
         <path id="gaugeArc1" fill="none" stroke="#1e40af" stroke-width="16" stroke-linecap="butt"/>
         <path id="gaugeArc2" fill="none" stroke="#3b82f6" stroke-width="16" stroke-linecap="butt"/>
@@ -539,6 +539,7 @@ function describeArc(cx, cy, r, startAngle, endAngle){
 }
 function updateGauge(value){
   // 0->180deg arc, value 0-100 maps to 0-180
+  value = Math.max(0, Math.min(100, value));
   const cx = 100, cy = 100, r = 75;
   const segments = [
     {id:'gaugeArc1', color:'#1d4ed8', from:0,   to:20},
@@ -722,8 +723,21 @@ function showChartLine(type, evt){
 }
 
 // ============ UI 更新 ============
+function safe(v, decimals, suffix) {
+  if (!Number.isFinite(v)) return '--';
+  return decimals !== undefined ? v.toFixed(decimals) + (suffix || '') : v + (suffix || '');
+}
 function updateUI(data){
-  const {market, sentiment, weak, threeLine, composite, zbRate, ztCount, zbCount, dtCount, fbRate} = data;
+  const market = Number.isFinite(data.market) ? data.market : 0;
+  const sentiment = Number.isFinite(data.sentiment) ? data.sentiment : 0;
+  const weak = Number.isFinite(data.weak) ? data.weak : 0;
+  const threeLine = Number.isFinite(data.threeLine) ? data.threeLine : 0;
+  const composite = Number.isFinite(data.composite) ? data.composite : 0;
+  const zbRate = Number.isFinite(data.zbRate) ? data.zbRate : 0;
+  const ztCount = Number.isFinite(data.ztCount) ? data.ztCount : 0;
+  const zbCount = Number.isFinite(data.zbCount) ? data.zbCount : 0;
+  const dtCount = Number.isFinite(data.dtCount) ? data.dtCount : 0;
+  const fbRate = Number.isFinite(data.fbRate) ? data.fbRate : 0;
 
   // Gauge
   updateGauge(composite);
@@ -737,7 +751,7 @@ function updateUI(data){
   badge.style.color = label.color;
 
   // Progress dot
-  document.getElementById('progressDot').style.left = composite + '%';
+  document.getElementById('progressDot').style.left = Math.max(0, Math.min(100, composite)) + '%';
 
   // Row 2 metrics
   document.getElementById('marketCoefVal').textContent = market;
@@ -754,12 +768,13 @@ function updateUI(data){
   document.getElementById('vsTag').textContent = vsTagText;
 
   // ZB rate
-  document.getElementById('zbRateDisplay').textContent = zbRate.toFixed(2) + '%';
-  document.getElementById('fbRate2').textContent = fbRate.toFixed(1) + '%';
-  document.getElementById('fbRateDisplay').textContent = fbRate.toFixed(1) + '%';
+  document.getElementById('zbRateDisplay').textContent = safe(zbRate, 2, '%');
+  document.getElementById('fbRate2').textContent = safe(fbRate, 1, '%');
+  const fbRateEl = document.getElementById('fbRateDisplay');
+  if(fbRateEl) fbRateEl.textContent = safe(fbRate, 1, '%');
   document.getElementById('ztMainDisplay').textContent = `${ztCount} / ${zbCount} / ${dtCount}`;
   const zbRateMiniEl = document.getElementById('zbRateMini');
-  if(zbRateMiniEl) zbRateMiniEl.textContent = zbRate.toFixed(1) + '%';
+  if(zbRateMiniEl) zbRateMiniEl.textContent = safe(zbRate, 1, '%');
 
   // Net ratio
   const netRatioVal = ztCount / Math.max(dtCount, 1);
@@ -961,11 +976,20 @@ window.addEventListener('DOMContentLoaded', () => {
       if (d.history && d.history.length > 0) {
         historyData = d.history.map(h => ({
           date:       h.date,
-          market:     h.market,
-          sentiment:  h.sentiment,
-          weak:       h.weak,
-          threeLine:  h.three_line,
-          composite:  h.composite,
+          market:     Number.isFinite(h.market) ? h.market : 0,
+          sentiment:  Number.isFinite(h.sentiment) ? h.sentiment : 0,
+          weak:       Number.isFinite(h.weak) ? h.weak : 0,
+          threeLine:  Number.isFinite(h.three_line) ? h.three_line : 0,
+          composite:  Number.isFinite(h.composite) ? h.composite : 0,
+          // Keep raw fields for UI display
+          zt_count:   h.zt_count,
+          zb_count:   h.zb_count,
+          dt_count:   h.dt_count,
+          zb_rate:    h.zb_rate,
+          fb_rate:    h.fb_rate,
+          sh_chg:     h.sh_chg,
+          net_ratio:  h.net_ratio,
+          label:      h.label,
         }));
         console.log(`[历史数据] 加载真实历史 ${historyData.length} 天`);
         const badge = document.getElementById('dataSourceBadge');
@@ -990,12 +1014,15 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
     // 5d changes
-    if(historyData.length >= 5){
+    if(historyData.length >= 2){
       const cur = historyData[historyData.length-1].composite;
-      const prev5 = historyData[historyData.length-6]?.composite || cur;
-      const emo5d = cur - prev5;
+      const prevIdx = Math.max(0, historyData.length - 6);
+      const prev5 = historyData[prevIdx].composite;
+      const emo5d = Number.isFinite(cur) && Number.isFinite(prev5) ? cur - prev5 : 0;
       document.getElementById('emo5dChange').textContent = (emo5d >= 0 ? '+' : '') + emo5d.toFixed(1);
       document.getElementById('emo5dChange').style.color = emo5d >= 0 ? 'var(--green)' : 'var(--red)';
+    } else {
+      document.getElementById('emo5dChange').textContent = '--';
     }
 
     // 1d change for compositeDayChange badge
@@ -1025,6 +1052,17 @@ window.addEventListener('DOMContentLoaded', () => {
   document.getElementById('tradeDateInput').addEventListener('change', function(){
     const d = this.value.replace(/-/g, '/');
     document.getElementById('tradeDateDisplay').textContent = d;
+    // Find matching history entry by date_full or date
+    const shortDate = this.value.slice(5).replace('-', '/');
+    const match = historyData.find(h => h.date === shortDate);
+    if(match) {
+      const zt = Number.isFinite(match.zt_count) ? match.zt_count : 0;
+      const zb = Number.isFinite(match.zb_count) ? match.zb_count : 0;
+      const dt = Number.isFinite(match.dt_count) ? match.dt_count : 0;
+      const zbR = Number.isFinite(match.zb_rate) ? match.zb_rate : 0;
+      const fbR = Number.isFinite(match.fb_rate) ? match.fb_rate : (100 - zbR);
+      updateUI({market: match.market, sentiment: match.sentiment, weak: match.weak, threeLine: match.threeLine, composite: match.composite, zbRate: zbR, ztCount: zt, zbCount: zb, dtCount: dt, fbRate: fbR});
+    }
   });
 });
 
