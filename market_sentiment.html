@@ -687,11 +687,11 @@ function updateChartStats(range){
   const slice = historyData.slice(-range);
   if(slice.length === 0) return;
   const last = slice[slice.length - 1];
-  document.getElementById('statLatestDate').textContent = last.date;
-  document.getElementById('statThreeLine').textContent = last.threeLine;
-  const vsVal = last.sentiment > 0 ? (last.market / last.sentiment).toFixed(1) : '—';
+  document.getElementById('statLatestDate').textContent = last.date || '--';
+  document.getElementById('statThreeLine').textContent = Number.isFinite(last.threeLine) ? last.threeLine : '--';
+  const vsVal = (Number.isFinite(last.sentiment) && last.sentiment > 0 && Number.isFinite(last.market)) ? (last.market / last.sentiment).toFixed(1) : '—';
   document.getElementById('statVS').textContent = vsVal;
-  document.getElementById('statComposite').textContent = last.composite;
+  document.getElementById('statComposite').textContent = Number.isFinite(last.composite) ? last.composite : '--';
 }
 
 function setRange(days){
@@ -777,8 +777,8 @@ function updateUI(data){
   if(zbRateMiniEl) zbRateMiniEl.textContent = safe(zbRate, 1, '%');
 
   // Net ratio
-  const netRatioVal = ztCount / Math.max(dtCount, 1);
-  document.getElementById('netRatio').textContent = netRatioVal.toFixed(2);
+  const netRatioVal = dtCount > 0 ? ztCount / dtCount : 0;
+  document.getElementById('netRatio').textContent = safe(netRatioVal, 2);
 
   // getRating: update label colors and warn text
   const rating = getRating(zbRate, netRatioVal);
@@ -947,7 +947,32 @@ async function fetchAllData(){
 
 // ============ Init ============
 function initDefault(){
-  // Default values from screenshot
+  // Use latest history entry if available
+  if(historyData.length > 0) {
+    const last = historyData[historyData.length - 1];
+    const zt = Number.isFinite(last.zt_count) ? last.zt_count : 54;
+    const zb = Number.isFinite(last.zb_count) ? last.zb_count : 38;
+    const dt = Number.isFinite(last.dt_count) ? last.dt_count : 15;
+    const zbR = Number.isFinite(last.zb_rate) ? last.zb_rate : 41.3;
+    const fbR = Number.isFinite(last.fb_rate) ? last.fb_rate : (100 - zbR);
+    // Set prevDayZtCount from second-to-last entry
+    if(historyData.length >= 2) {
+      const prev = historyData[historyData.length - 2];
+      prevDayZtCount = Number.isFinite(prev.zt_count) ? prev.zt_count : 0;
+    }
+    updateUI({market: last.market, sentiment: last.sentiment, weak: last.weak, threeLine: last.threeLine, composite: last.composite, zbRate: zbR, ztCount: zt, zbCount: zb, dtCount: dt, fbRate: fbR});
+    // Update trade date display
+    if(last.date) document.getElementById('tradeDateDisplay').textContent = '2026/' + last.date.replace('/', '/');
+    // Update 5d zb rate
+    if(historyData.length >= 5) {
+      const last5 = historyData.slice(-5);
+      const avgZb = last5.reduce((s, h) => s + (Number.isFinite(h.zb_rate) ? h.zb_rate : 0), 0) / 5;
+      document.getElementById('zbRate5d').textContent = safe(avgZb, 1, '%');
+      document.getElementById('zb5dChange').textContent = safe(avgZb, 1, '%');
+    }
+    return;
+  }
+  // Fallback default values
   const market=29, sentiment=28, weak=70, threeLine=24, composite=29;
   const zbRate=41.3, ztCount=54, zbCount=38, dtCount=15, fbRate=58.7;
   updateUI({market, sentiment, weak, threeLine, composite, zbRate, ztCount, zbCount, dtCount, fbRate});
