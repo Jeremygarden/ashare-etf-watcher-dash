@@ -595,11 +595,48 @@ html,body{overflow-x:hidden;max-width:100vw}
     </div>
   </div>
 
-  <!-- 市场情绪 Placeholder -->
-  <div style="background:var(--card);border-radius:12px;border:1px solid var(--border);padding:16px;flex:1;min-height:120px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:8px">
-    <div style="font-size:24px">🌡️</div>
-    <div style="font-size:13px;font-weight:700;color:var(--text)">市场情绪</div>
-    <div style="font-size:11px;color:var(--sub);text-align:center">恐贪指数 · 资金情绪 · 大单净流入<br><span style="color:var(--blue);margin-top:4px;display:inline-block">即将上线</span></div>
+  <!-- 市场情绪卡片 -->
+  <div id="sentimentCard" style="background:var(--card);border-radius:12px;border:1px solid var(--border);padding:14px 16px;flex:1;min-height:120px">
+    <!-- Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <div style="display:flex;align-items:center;gap:6px">
+        <span style="font-size:14px">🌡️</span>
+        <span style="font-size:13px;font-weight:700;color:var(--text)">市场情绪三线</span>
+        <span id="sentBadge" style="font-size:10px;padding:2px 8px;border-radius:20px;font-weight:600;background:var(--soft-2);color:var(--sub)">加载中</span>
+      </div>
+      <a href="market_sentiment.html" target="_blank"
+         style="font-size:11px;padding:4px 10px;background:var(--blue);color:#fff;border-radius:6px;text-decoration:none;font-weight:600;display:inline-flex;align-items:center;gap:4px;white-space:nowrap">
+        详细分析 →
+      </a>
+    </div>
+    <!-- 三线指标行 -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px">
+      <div style="background:var(--soft-2);border-radius:8px;padding:8px;text-align:center">
+        <div style="font-size:9px;color:var(--sub);margin-bottom:3px">大盘系数</div>
+        <div id="sentMarket" style="font-size:20px;font-weight:800;line-height:1">--</div>
+      </div>
+      <div style="background:var(--soft-2);border-radius:8px;padding:8px;text-align:center">
+        <div style="font-size:9px;color:var(--sub);margin-bottom:3px">超短情绪</div>
+        <div id="sentSentiment" style="font-size:20px;font-weight:800;line-height:1">--</div>
+      </div>
+      <div style="background:var(--soft-2);border-radius:8px;padding:8px;text-align:center">
+        <div style="font-size:9px;color:var(--sub);margin-bottom:3px">亏钱效应</div>
+        <div id="sentWeak" style="font-size:20px;font-weight:800;line-height:1">--</div>
+      </div>
+      <div style="background:var(--soft-2);border-radius:8px;padding:8px;text-align:center">
+        <div style="font-size:9px;color:var(--sub);margin-bottom:3px">三线分数</div>
+        <div id="sentThreeLine" style="font-size:20px;font-weight:800;line-height:1;color:var(--blue)">--</div>
+      </div>
+    </div>
+    <!-- 综合得分进度条 -->
+    <div style="display:flex;align-items:center;gap:8px">
+      <div style="font-size:10px;color:var(--sub);white-space:nowrap">综合</div>
+      <div style="flex:1;height:6px;background:var(--soft-2);border-radius:3px;overflow:hidden">
+        <div id="sentBar" style="height:100%;border-radius:3px;width:0;transition:width .4s;background:var(--blue)"></div>
+      </div>
+      <div id="sentComposite" style="font-size:13px;font-weight:800;min-width:28px;text-align:right">--</div>
+      <div id="sentDate" style="font-size:9px;color:var(--sub);white-space:nowrap">--</div>
+    </div>
   </div>
 
   </div><!-- end 右侧列 -->
@@ -1613,6 +1650,58 @@ function init(){
 init();
 // Auto-reload page every 31 minutes so GitHub Actions refresh (every 30min) is picked up automatically
 setInterval(() => { window.location.href = window.location.pathname + '?t=' + Date.now(); }, 31 * 60 * 1000);
+
+// ══ 市场情绪卡片：从 sentiment_history.json 加载最新一日数据 ══
+(async function loadSentimentCard(){
+  const el = id => document.getElementById(id);
+  try {
+    const res = await fetch('sentiment_history.json?t=' + Date.now());
+    if (!res.ok) throw new Error('fetch failed');
+    const json = await res.json();
+    const history = json.history || [];
+    if (!history.length) throw new Error('empty');
+    const d = history[history.length - 1];
+
+    // 颜色映射
+    function scoreColor(v){
+      if (v >= 70) return 'var(--red)';
+      if (v >= 50) return '#fa8c16';
+      if (v >= 30) return 'var(--blue)';
+      return '#7d8590';
+    }
+    function weakColor(v){
+      // 亏钱效应：越高越弱，颜色反转
+      if (v >= 70) return 'var(--green)';
+      if (v >= 50) return '#fa8c16';
+      return 'var(--red)';
+    }
+
+    // Badge
+    const badge = el('sentBadge');
+    if (badge) {
+      badge.textContent = d.label || '情绪';
+      const c = d.composite || 0;
+      badge.style.background = c >= 70 ? '#fff1f0' : c >= 50 ? '#fff7e6' : c >= 30 ? '#e6f4ff' : 'var(--soft-2)';
+      badge.style.color      = c >= 70 ? 'var(--red)' : c >= 50 ? '#fa8c16' : c >= 30 ? 'var(--blue)' : 'var(--sub)';
+    }
+
+    // 三线数值
+    if (el('sentMarket'))    { el('sentMarket').textContent    = d.market    ?? '--'; el('sentMarket').style.color    = scoreColor(d.market); }
+    if (el('sentSentiment')) { el('sentSentiment').textContent = d.sentiment ?? '--'; el('sentSentiment').style.color = scoreColor(d.sentiment); }
+    if (el('sentWeak'))      { el('sentWeak').textContent      = d.weak      ?? '--'; el('sentWeak').style.color      = weakColor(d.weak); }
+    if (el('sentThreeLine')) { el('sentThreeLine').textContent = d.three_line ?? '--'; el('sentThreeLine').style.color = scoreColor(d.three_line); }
+
+    // 综合进度条
+    const comp = d.composite || 0;
+    if (el('sentBar'))       { el('sentBar').style.width = comp + '%'; el('sentBar').style.background = scoreColor(comp); }
+    if (el('sentComposite')) { el('sentComposite').textContent = comp; el('sentComposite').style.color = scoreColor(comp); }
+    if (el('sentDate'))      { el('sentDate').textContent = d.date_full || d.date || ''; }
+
+  } catch(e) {
+    const badge = document.getElementById('sentBadge');
+    if (badge) { badge.textContent = '数据加载失败'; }
+  }
+})();
 </script>
 </body>
 </html>
