@@ -1567,11 +1567,99 @@ function setRefreshLoading(loading){
   if(textEl){ textEl.textContent = loading ? "加载中..." : "刷新数据"; }
 }
 
+// ══ 实时数据刷新（盘中直接调用东财API，不重载页面）══
+async function fetchLiveData(){
+  // secid mapping: 指数
+  const IDX_SECIDS = {
+    sh001: '1.000001',
+    hs300: '1.000300',
+    sz50:  '1.000016',
+    cyb:   '0.399006',
+  };
+  // secid mapping: ETF
+  const ETF_SECIDS = {
+    '510300': '1.510300', '510310': '1.510310', '510330': '1.510330',
+    '159919': '0.159919', '510050': '1.510050', '510500': '1.510500',
+    '512100': '1.512100', '159915': '0.159915', '588000': '1.588000',
+  };
+
+  const allSecids = [
+    ...Object.values(IDX_SECIDS),
+    ...Object.values(ETF_SECIDS),
+  ].join('%2C');
+
+  // fltt=1: 原始整数格式 (f43=价格×1000, f3=涨跌幅×100)
+  const url = `https://push2.eastmoney.com/api/qt/ulist.np/get?fltt=1&invt=2&fields=f43,f3,f12&secids=${allSecids}&ut=bd1d9ddb04089700cf9c27f6f7426281`;
+
+  const res = await fetch(url);
+  if(!res.ok) throw new Error(`HTTP ${res.status}`);
+  const json = await res.json();
+  const items = json?.data?.diff || [];
+  if(!items.length) throw new Error('empty response');
+
+  // Build reverse lookup: code -> secid key
+  const secidToIdxKey = {};
+  Object.entries(IDX_SECIDS).forEach(([k, v]) => secidToIdxKey[v.split('.')[1]] = k);
+
+  let updatedIdx = 0, updatedEtf = 0;
+  items.forEach(item => {
+    const code = String(item.f12);
+    const rawPrice = item.f43;
+    const rawChg   = item.f3;
+    if(!rawPrice || rawPrice <= 0) return;
+
+    const price = rawPrice / 1000;
+    const chg   = rawChg / 100;
+
+    // 更新指数
+    if(secidToIdxKey[code] && BACKEND.indices[secidToIdxKey[code]]) {
+      BACKEND.indices[secidToIdxKey[code]].price = +price.toFixed(2);
+      BACKEND.indices[secidToIdxKey[code]].chg   = +chg.toFixed(2);
+      updatedIdx++;
+    }
+    // 更新ETF
+    if(BACKEND.etfs[code]) {
+      BACKEND.etfs[code].price = +price.toFixed(3);
+      BACKEND.etfs[code].chg   = +chg.toFixed(2);
+      updatedEtf++;
+    }
+  });
+
+  if(updatedIdx + updatedEtf === 0) throw new Error('no data matched');
+
+  // 重新渲染
+  renderIndices();
+  renderKPI();
+  renderETFGrid();
+  if(typeof selectedCode !== 'undefined' && selectedCode) {
+    renderDetail(selectedCode);
+  }
+
+  // 显示刷新时间
+  const now = new Date();
+  const hh = now.getHours().toString().padStart(2,'0');
+  const mm = now.getMinutes().toString().padStart(2,'0');
+  const ss = now.getSeconds().toString().padStart(2,'0');
+  return `${hh}:${mm}:${ss}`;
+}
+
 async function refreshData(){
-  // Data is baked into HTML by GitHub Actions (every 30min during market hours).
-  // Reload the page to get the latest version; browser cache is bypassed via ?t=.
   setRefreshLoading(true);
-  window.location.href = window.location.pathname + '?t=' + Date.now();
+  try {
+    const timeStr = await fetchLiveData();
+    // Show refresh time briefly, then restore label
+    const btn = document.getElementById('refreshBtn');
+    const textEl = btn ? btn.querySelector('.refresh-text') : null;
+    if(textEl) {
+      textEl.textContent = `已刷新 ${timeStr}`;
+      setTimeout(() => { textEl.textContent = '刷新数据'; }, 3000);
+    }
+    setRefreshLoading(false);
+  } catch(e) {
+    console.warn('[刷新] 实时API失败，降级为页面重载:', e.message);
+    // Fallback: reload page to get latest GitHub Actions build
+    window.location.href = window.location.pathname + '?t=' + Date.now();
+  }
 }
 
 // ══ 初始化 ══
