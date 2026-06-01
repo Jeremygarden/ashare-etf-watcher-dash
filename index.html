@@ -1569,74 +1569,79 @@ function setRefreshLoading(loading){
 
 // ══ 实时数据刷新（盘中直接调用东财API，不重载页面）══
 async function fetchLiveData(){
-  // secid mapping: 指数
-  const IDX_SECIDS = {
-    sh001: '1.000001',
-    hs300: '1.000300',
-    sz50:  '1.000016',
-    cyb:   '0.399006',
+  // 数据源：腾讯财经 qt.gtimg.cn
+  // 接口格式：v_sh510300="1~名称~代码~当前价~昨收~今开~成交量~..."
+  //   field[2] = 代码
+  //   field[3] = 当前价（字符串，直接 parseFloat，无需除法）
+  //   field[4] = 昨收价
+  //   涨跌幅 = (field[3] - field[4]) / field[4] * 100
+  // 优点：指数和ETF使用相同字段，无单位换算，稳定可靠
+
+  // 腾讯代码映射: 交易所前缀sh/sz + 6位代码
+  const TENCENT_MAP = {
+    // 指数 → BACKEND.indices key
+    '000001': { type:'idx', key:'sh001' },
+    '000300': { type:'idx', key:'hs300' },
+    '000016': { type:'idx', key:'sz50'  },
+    '399006': { type:'idx', key:'cyb'   },
+    // ETF → BACKEND.etfs key（code itself）
+    '510300': { type:'etf' },
+    '510310': { type:'etf' },
+    '510330': { type:'etf' },
+    '159919': { type:'etf' },
+    '510050': { type:'etf' },
+    '510500': { type:'etf' },
+    '512100': { type:'etf' },
+    '159915': { type:'etf' },
+    '588000': { type:'etf' },
   };
-  // secid mapping: ETF
-  const ETF_SECIDS = {
-    '510300': '1.510300', '510310': '1.510310', '510330': '1.510330',
-    '159919': '0.159919', '510050': '1.510050', '510500': '1.510500',
-    '512100': '1.512100', '159915': '0.159915', '588000': '1.588000',
-  };
 
-  const allSecids = [
-    ...Object.values(IDX_SECIDS),
-    ...Object.values(ETF_SECIDS),
-  ].join('%2C');
+  const symbols = [
+    'sh000001','sh000300','sh000016','sz399006',
+    'sh510300','sh510310','sh510330','sz159919',
+    'sh510050','sh510500','sh512100','sz159915','sh588000',
+  ].join(',');
 
-  // fltt=1 原始整数格式:
-  //   f2  = 当前价/收盘价 (盘中=最新成交价，收盘后=收盘价)
-  //         指数×100，ETF×1000
-  //   f43 = 最新成交价（盘中有效，收盘后为字符串"-"，不可用）
-  //   f3  = 涨跌幅×100（正常值如 -16 表示 -0.16%）
-  // 统一用 f2：盘中和收盘后都有真实值，不会出现"-"
-  const url = `https://push2.eastmoney.com/api/qt/ulist.np/get?fltt=1&invt=2&fields=f2,f3,f12&secids=${allSecids}&ut=bd1d9ddb04089700cf9c27f6f7426281`;
+  const url = `https://qt.gtimg.cn/q=${symbols}`;
+  const res = await fetch(url, {
+    headers: { 'Referer': 'https://finance.qq.com/' }
+  });
+  if(!res.ok) throw new Error(`腾讯接口 HTTP ${res.status}`);
 
-  const res = await fetch(url);
-  if(!res.ok) throw new Error(`HTTP ${res.status}`);
-  const json = await res.json();
-  const items = json?.data?.diff || [];
-  if(!items.length) throw new Error('empty response');
-
-  // Build reverse lookup: code -> BACKEND key
-  const codeToIdxKey = {};
-  Object.entries(IDX_SECIDS).forEach(([k, v]) => codeToIdxKey[v.split('.')[1]] = k);
-
-  // Index codes set for division logic
-  const idxCodes = new Set(Object.values(IDX_SECIDS).map(v => v.split('.')[1]));
+  const text = await res.text();
+  const lines = text.trim().split('\n').filter(l => l.trim());
+  if(!lines.length) throw new Error('腾讯接口空响应');
 
   let updatedIdx = 0, updatedEtf = 0;
-  items.forEach(item => {
-    const code   = String(item.f12);
-    const rawF2  = item.f2;
-    const rawChg = item.f3;
 
-    // f2 must be a positive number (not "-" or 0)
-    if(typeof rawF2 !== 'number' || rawF2 <= 0) return;
+  lines.forEach(line => {
+    // v_sh510300="1~...~510300~4.879~4.923~...";
+    const m = line.match(/v_\w+="(.*?)";?/);
+    if(!m) return;
+    const fields = m[1].split('~');
+    if(fields.length < 5) return;
 
-    const chg = rawChg / 100;  // e.g. -16 → -0.16%
+    const code  = fields[2];
+    const price = parseFloat(fields[3]);
+    const prev  = parseFloat(fields[4]);
+    if(!price || !prev || price <= 0 || prev <= 0) return;
 
-    // 更新指数（指数 f2 除以100，如 406135 → 4061.35）
-    if(codeToIdxKey[code] && BACKEND.indices[codeToIdxKey[code]]) {
-      const price = rawF2 / 100;
-      BACKEND.indices[codeToIdxKey[code]].price = +price.toFixed(2);
-      BACKEND.indices[codeToIdxKey[code]].chg   = +chg.toFixed(2);
+    const chg = +((price - prev) / prev * 100).toFixed(2);
+    const meta = TENCENT_MAP[code];
+    if(!meta) return;
+
+    if(meta.type === 'idx' && BACKEND.indices[meta.key]) {
+      BACKEND.indices[meta.key].price = +price.toFixed(2);
+      BACKEND.indices[meta.key].chg   = chg;
       updatedIdx++;
-    }
-    // 更新ETF（ETF f2 除以1000，如 4883 → 4.883）
-    else if(BACKEND.etfs[code]) {
-      const price = rawF2 / 1000;
+    } else if(meta.type === 'etf' && BACKEND.etfs[code]) {
       BACKEND.etfs[code].price = +price.toFixed(3);
-      BACKEND.etfs[code].chg   = +chg.toFixed(2);
+      BACKEND.etfs[code].chg   = chg;
       updatedEtf++;
     }
   });
 
-  if(updatedIdx + updatedEtf === 0) throw new Error('no data matched');
+  if(updatedIdx + updatedEtf === 0) throw new Error('腾讯接口数据匹配失败');
 
   // 重新渲染
   renderIndices();
@@ -1646,29 +1651,27 @@ async function fetchLiveData(){
     renderDetail(selectedCode);
   }
 
-  // 显示刷新时间
+  // 返回刷新时间字符串
   const now = new Date();
   const hh = now.getHours().toString().padStart(2,'0');
   const mm = now.getMinutes().toString().padStart(2,'0');
   const ss = now.getSeconds().toString().padStart(2,'0');
-  return `${hh}:${mm}:${ss}`;
+  return `${updatedIdx+updatedEtf}项 ${hh}:${mm}:${ss}`;
 }
 
 async function refreshData(){
   setRefreshLoading(true);
   try {
     const timeStr = await fetchLiveData();
-    // Show refresh time briefly, then restore label
     const btn = document.getElementById('refreshBtn');
     const textEl = btn ? btn.querySelector('.refresh-text') : null;
     if(textEl) {
       textEl.textContent = `已刷新 ${timeStr}`;
-      setTimeout(() => { textEl.textContent = '刷新数据'; }, 3000);
+      setTimeout(() => { textEl.textContent = '刷新数据'; }, 4000);
     }
     setRefreshLoading(false);
   } catch(e) {
     console.warn('[刷新] 实时API失败，降级为页面重载:', e.message);
-    // Fallback: reload page to get latest GitHub Actions build
     window.location.href = window.location.pathname + '?t=' + Date.now();
   }
 }
