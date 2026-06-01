@@ -1588,8 +1588,13 @@ async function fetchLiveData(){
     ...Object.values(ETF_SECIDS),
   ].join('%2C');
 
-  // fltt=1: 原始整数格式 (f43=价格×1000, f3=涨跌幅×100)
-  const url = `https://push2.eastmoney.com/api/qt/ulist.np/get?fltt=1&invt=2&fields=f43,f3,f12&secids=${allSecids}&ut=bd1d9ddb04089700cf9c27f6f7426281`;
+  // fltt=1 原始整数格式:
+  //   f2  = 当前价/收盘价 (盘中=最新成交价，收盘后=收盘价)
+  //         指数×100，ETF×1000
+  //   f43 = 最新成交价（盘中有效，收盘后为字符串"-"，不可用）
+  //   f3  = 涨跌幅×100（正常值如 -16 表示 -0.16%）
+  // 统一用 f2：盘中和收盘后都有真实值，不会出现"-"
+  const url = `https://push2.eastmoney.com/api/qt/ulist.np/get?fltt=1&invt=2&fields=f2,f3,f12&secids=${allSecids}&ut=bd1d9ddb04089700cf9c27f6f7426281`;
 
   const res = await fetch(url);
   if(!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -1597,28 +1602,34 @@ async function fetchLiveData(){
   const items = json?.data?.diff || [];
   if(!items.length) throw new Error('empty response');
 
-  // Build reverse lookup: code -> secid key
-  const secidToIdxKey = {};
-  Object.entries(IDX_SECIDS).forEach(([k, v]) => secidToIdxKey[v.split('.')[1]] = k);
+  // Build reverse lookup: code -> BACKEND key
+  const codeToIdxKey = {};
+  Object.entries(IDX_SECIDS).forEach(([k, v]) => codeToIdxKey[v.split('.')[1]] = k);
+
+  // Index codes set for division logic
+  const idxCodes = new Set(Object.values(IDX_SECIDS).map(v => v.split('.')[1]));
 
   let updatedIdx = 0, updatedEtf = 0;
   items.forEach(item => {
-    const code = String(item.f12);
-    const rawPrice = item.f43;
-    const rawChg   = item.f3;
-    if(!rawPrice || rawPrice <= 0) return;
+    const code   = String(item.f12);
+    const rawF2  = item.f2;
+    const rawChg = item.f3;
 
-    const price = rawPrice / 1000;
-    const chg   = rawChg / 100;
+    // f2 must be a positive number (not "-" or 0)
+    if(typeof rawF2 !== 'number' || rawF2 <= 0) return;
 
-    // 更新指数
-    if(secidToIdxKey[code] && BACKEND.indices[secidToIdxKey[code]]) {
-      BACKEND.indices[secidToIdxKey[code]].price = +price.toFixed(2);
-      BACKEND.indices[secidToIdxKey[code]].chg   = +chg.toFixed(2);
+    const chg = rawChg / 100;  // e.g. -16 → -0.16%
+
+    // 更新指数（指数 f2 除以100，如 406135 → 4061.35）
+    if(codeToIdxKey[code] && BACKEND.indices[codeToIdxKey[code]]) {
+      const price = rawF2 / 100;
+      BACKEND.indices[codeToIdxKey[code]].price = +price.toFixed(2);
+      BACKEND.indices[codeToIdxKey[code]].chg   = +chg.toFixed(2);
       updatedIdx++;
     }
-    // 更新ETF
-    if(BACKEND.etfs[code]) {
+    // 更新ETF（ETF f2 除以1000，如 4883 → 4.883）
+    else if(BACKEND.etfs[code]) {
+      const price = rawF2 / 1000;
       BACKEND.etfs[code].price = +price.toFixed(3);
       BACKEND.etfs[code].chg   = +chg.toFixed(2);
       updatedEtf++;
