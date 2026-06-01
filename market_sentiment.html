@@ -923,8 +923,10 @@ async function fetchAllData(){
     const zbRate = calcZBRate(zbCount, ztCount) || 41.3;
 
     const market = calcMarketCoef(sh3, upRatio, northFlow);
-    const sentiment = calcSentiment(ztCount, avgTurnover, mainNetFlow);
-    const weak = calcWeakMoney(zbRate, sh3);
+    // Fix: calcSentiment(ztCount, zbRate, shChg) - use zbRate and sh3 (index chg), not avgTurnover/mainNetFlow
+    const sentiment = calcSentiment(ztCount, zbRate, sh3);
+    // Fix: calcWeakMoney(zbRate, upRatio, mainNetYi) - pass upRatio and mainNetFlow (in 亿)
+    const weak = calcWeakMoney(zbRate, upRatio, mainNetFlow);
     const threeLine = calcThreeLine(market, sentiment, weak);
     const composite = calcComposite(market, sentiment, weak, threeLine);
 
