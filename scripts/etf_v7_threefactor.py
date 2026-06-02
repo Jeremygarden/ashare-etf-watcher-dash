@@ -390,7 +390,7 @@ def align_idx(data, idx_d):
     return [idx_map.get(d["date"]) for d in data]
 
 
-def analyze_all(data, idx_d, shares_map, target_date, days=35):
+def analyze_all(data, idx_d, shares_map, code, target_date, days=35):
     """三因子模型分析，shares_map: {code: {date: {shares_yi, delta_yi, delta_pct}}}"""
     if len(data) < 22:
         return []
@@ -423,17 +423,16 @@ def analyze_all(data, idx_d, shares_map, target_date, days=35):
         vp = vprob(vr)
         dp = dprob(chg, t5, round(t5i, 2), vr, idchg)
 
-        # 份额概率：从 shares_map 查对应 code + 日期
+        # 份额概率：只使用当前ETF code 对应日期的数据
         sp              = None
         share_delta_pct = None
         share_delta_yi  = None
-        for code_k, date_map in shares_map.items():
-            if d["date"] in date_map:
-                info            = date_map[d["date"]]
-                share_delta_pct = info.get("delta_pct")
-                share_delta_yi  = info.get("delta_yi")
-                sp              = sprob(share_delta_pct)
-                break
+        date_map = shares_map.get(code, {}) if isinstance(shares_map, dict) else {}
+        info = date_map.get(d["date"]) if isinstance(date_map, dict) else None
+        if info:
+            share_delta_pct = info.get("delta_pct")
+            share_delta_yi  = info.get("delta_yi")
+            sp              = sprob(share_delta_pct)
 
         # 三因子综合概率（份额不可用时退化为二因子 70/30）
         if sp is not None:
@@ -719,7 +718,7 @@ body{{width:1440px;height:810px;overflow:hidden;font-family:-apple-system,"SF Pr
     <div class="tx"><span>份额日变</span>亿份 · 净申赎</div>
   </div>
   <div class="stat">
-    <div class="vi" style="color:#818cf8">{shares_available_count}/7</div>
+    <div class="vi" style="color:#818cf8">{shares_available_count}/{len(ETFS)}</div>
     <div class="tx"><span>份额覆盖</span>三因子完整度</div>
   </div>
 </div>
@@ -978,7 +977,7 @@ def main(target_date=None, do_send=False, record_only=False):
             print(f"    ⚠️ 数据不足（{len(data) if data else 0}条）")
             continue
 
-        hist = analyze_all(data, idx_300, shares_map, target_date or "", 35)
+        hist = analyze_all(data, idx_300, shares_map, code, target_date or "", 35)
         if not hist:
             print("    ⚠️ 分析失败")
             continue
