@@ -1003,13 +1003,18 @@ function renderDetail(code){
     document.getElementById("metricShares").textContent=`${(d.shares_yi||0).toFixed(1)}亿份`;
     const dyi = d.delta_yi;
     const dpct = d.delta_pct;
-    if(dyi!==null&&dyi!==undefined){
+    if(dyi!==null&&dyi!==undefined&&dyi!==0){
+      // 有效日变数据（非零）
       const sign = dyi>0?"↑":"↓";
       document.getElementById("metricDelta").textContent=
         `${sign}${Math.abs(dyi).toFixed(2)}亿份 (${dpct>0?"+":""}${(dpct||0).toFixed(2)}%)`;
       document.getElementById("spDesc").textContent=
         dyi>0?`净申购 +${dyi.toFixed(2)}亿份，一级市场主动买入信号`:
         `净赎回 ${dyi.toFixed(2)}亿份，机构减仓中`;
+    } else if(dyi===0){
+      // delta=0：盘中份额API尚未更新（与前日相同），显示待更新而非0
+      document.getElementById("metricDelta").textContent="⏳ 待更新";
+      document.getElementById("spDesc").textContent="份额数据盘中未更新，收盘后自动刷新";
     }
   } else {
     spEl.textContent="N/A";
@@ -1133,10 +1138,14 @@ function renderSharesChart(code) {
   }
   const d1El = el('shareStatD1');
   if (d1El) {
-    if (d.delta_yi !== null && d.delta_yi !== undefined) {
+    if (d.delta_yi !== null && d.delta_yi !== undefined && d.delta_yi !== 0) {
+      // 有效非零日变
       const sign = d.delta_yi >= 0 ? '+' : '';
       const color = d.delta_yi > 0 ? 'var(--red)' : d.delta_yi < 0 ? 'var(--green)' : 'var(--sub)';
       d1El.innerHTML = `<span style="font-size:22px;font-weight:800;color:${color}">${sign}${d.delta_yi.toFixed(2)}</span><span style="font-size:11px;color:${color};margin-left:4px">(${sign}${(d.delta_pct||0).toFixed(2)}%)</span>`;
+    } else if (d.delta_yi === 0) {
+      // 盘中陈旧数据，delta=0，显示待更新
+      d1El.innerHTML = '<span style="font-size:13px;color:var(--sub)">⏳ 待更新（盘中）</span>';
     } else {
       d1El.innerHTML = '<span style="font-size:13px;color:var(--sub)">历史积累中</span>';
     }
