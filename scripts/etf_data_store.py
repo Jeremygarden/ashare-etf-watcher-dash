@@ -107,7 +107,10 @@ class ETFDataStore:
             {upsert_cols},
             updated_at = datetime('now','localtime');
         """
-        values = tuple(data.get(c) for c in columns)
+        row_data = dict(data)
+        row_data["date"] = date
+        row_data["code"] = code
+        values = tuple(row_data.get(c) for c in columns)
         with sqlite3.connect(self.db_path) as conn:
             conn.execute(sql, values)
             conn.commit()
