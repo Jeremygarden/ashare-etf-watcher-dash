@@ -817,28 +817,54 @@ def send_email(html_path, json_path, target_date):
 # 主程序
 # ============================================================
 
+def _get_prev_shares_yi(code, today, shares_history):
+    """获取today前最近一个交易日的份额，用于盘中陈旧数据检测"""
+    all_dates = sorted(d for d in shares_history.keys() if d < today)
+    for d in reversed(all_dates):
+        entry = shares_history.get(d, {}).get(code)
+        if entry and entry.get("shares_yi") is not None:
+            return entry["shares_yi"]
+    return None
+
+
 def record_shares_only():
-    """仅采集当日份额数据（不跑完整分析）"""
+    """仅采集当日份额数据（不跑完整分析）。
+    防盘中陈旧数据：若API返回值与前一交易日完全相同，
+    标记 stale=True，不写入历史（避免日变显示为0）。
+    """
     today = datetime.now().strftime("%Y-%m-%d")
     print(f"📊 采集 {today} ETF份额数据（东方财富实时API）...")
     shares_history = load_shares_history()
     if today not in shares_history:
         shares_history[today] = {}
     ok = 0
+    stale_count = 0
     for code, info in ETFS.items():
         print(f"  {code} {info['n'][:12]}...", end=" ")
         sh = fetch_fund_shares_realtime(code)
         if sh:
+            new_val = sh["shares_yi"]
+            prev_val = _get_prev_shares_yi(code, today, shares_history)
+            # 盘中陈旧检测：API值与前日完全一致 → 数据未更新，跳过写入
+            if prev_val is not None and new_val == prev_val:
+                print(f"⏳ {new_val:.1f}亿份 (与前日相同，疑似盘中未更新，跳过写入)")
+                stale_count += 1
+                continue
             shares_history[today][code] = {
-                "shares_yi": sh["shares_yi"],
+                "shares_yi": new_val,
                 "ts": datetime.now().isoformat(),
             }
-            print(f"✅ {sh['shares_yi']:.1f}亿份")
+            print(f"✅ {new_val:.1f}亿份")
             ok += 1
         else:
             print("❌ 获取失败")
-    save_shares_history(shares_history)
-    print(f"\n✅ 采集完成 {ok}/7，已保存到本地")
+    # 若当日所有ETF都是陈旧数据，删除今日空entry避免污染历史
+    if ok == 0 and today in shares_history and not shares_history[today]:
+        del shares_history[today]
+        print(f"⚠️  今日数据全部与前日相同（盘中未更新），已跳过保存")
+    else:
+        save_shares_history(shares_history)
+        print(f"\n✅ 采集完成 {ok}/7 写入，{stale_count}/7 跳过（盘中陈旧）")
 
     if DATA_STORE_AVAILABLE:
         store = ETFDataStore()
@@ -895,17 +921,32 @@ def main(target_date=None, do_send=False, record_only=False):
         shares_history[run_date] = {}
 
     print(f"  📡 采集 {run_date} ETF份额（东方财富实时API）...")
+    stale_in_main = 0
     for code, info in ETFS.items():
         sh = fetch_fund_shares_realtime(code)
         if sh:
+            new_val = sh["shares_yi"]
+            prev_val = _get_prev_shares_yi(code, run_date, shares_history)
+            # 盘中陈旧检测：与前日完全一致则跳过
+            if prev_val is not None and new_val == prev_val:
+                print(f"    ⏳ {code}: {new_val:.1f}亿份 (盘中未更新，跳过)")
+                stale_in_main += 1
+                continue
             shares_history[run_date][code] = {
-                "shares_yi": sh["shares_yi"],
+                "shares_yi": new_val,
                 "ts": datetime.now().isoformat(),
             }
-            print(f"    ✅ {code}: {sh['shares_yi']:.1f}亿份")
+            print(f"    ✅ {code}: {new_val:.1f}亿份")
         else:
             print(f"    ⚠️ {code}: 获取失败")
-    save_shares_history(shares_history)
+    # 清理今日空entry
+    if run_date in shares_history and not shares_history[run_date]:
+        del shares_history[run_date]
+        print(f"  ⚠️  今日份额全部盘中未更新，未写入")
+    else:
+        save_shares_history(shares_history)
+    if stale_in_main:
+        print(f"  ⚠️  {stale_in_main}/7 ETF份额与前日相同（盘中陈旧），已跳过")
     print(f"  📊 累计历史: {len(shares_history)} 日")
 
     # Step 3: 构建份额映射
