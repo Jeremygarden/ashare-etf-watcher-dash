@@ -267,14 +267,24 @@ def load_shares_history():
 
 
 def save_shares_history(history):
-    """保存本地JSON历史份额，保留最近60日"""
+    """保存本地JSON历史份额，保留最近60日（原子写入，避免写失败损坏文件）"""
     dates = sorted(history.keys())
     if len(dates) > 60:
         for old in dates[:-60]:
             del history[old]
     os.makedirs(WORKSPACE, exist_ok=True)
-    with open(SHARES_OUT, "w", encoding="utf-8") as f:
-        json.dump(history, f, ensure_ascii=False, indent=2)
+    tmp_path = SHARES_OUT + ".tmp"
+    try:
+        with open(tmp_path, "w", encoding="utf-8") as f:
+            json.dump(history, f, ensure_ascii=False, indent=2)
+        os.replace(tmp_path, SHARES_OUT)  # atomic on POSIX
+    except Exception:
+        if os.path.exists(tmp_path):
+            try:
+                os.remove(tmp_path)
+            except OSError:
+                pass
+        raise
 
 
 def get_historical_share(code, target_date, history):

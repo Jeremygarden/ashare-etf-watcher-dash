@@ -1096,7 +1096,7 @@ window.addEventListener('DOMContentLoaded', () => {
 // 修复后自检（仅在 console 输出，不显示在页面）
 const testData = { sh3: 0.12, upRatio: 0.45, northFlow: 0.08, ztCount: 102, avgTo: 6.3, mainNetYi: -150, zbRate: 17.1 };
 const tm = calcMarketCoef(testData.sh3, testData.upRatio, testData.northFlow);
-const ts = calcSentiment(testData.ztCount, testData.avgTo, testData.mainNetYi);
+const ts = calcSentiment(testData.ztCount, testData.zbRate, testData.sh3);
 const tw = calcWeakMoney(testData.zbRate, testData.upRatio, testData.mainNetYi);
 const ttl = calcThreeLine(tm, ts, tw);
 const tc = calcComposite(tm, ts, tw, ttl);

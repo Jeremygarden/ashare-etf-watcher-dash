@@ -73,9 +73,16 @@ class ETFDataStore:
         self.db_path = db_path or DB_PATH
         self._init_db()
 
+    def _connect(self):
+        """Create connection with WAL mode and busy timeout for concurrent access safety."""
+        conn = sqlite3.connect(self.db_path, timeout=30)
+        conn.execute("PRAGMA journal_mode=WAL;")
+        conn.execute("PRAGMA busy_timeout=10000;")
+        return conn
+
     def _init_db(self):
         """建库建表"""
-        with sqlite3.connect(self.db_path) as conn:
+        with self._connect() as conn:
             conn.execute(CREATE_TABLE_SQL)
             for idx_sql in CREATE_INDEX_SQL:
                 conn.execute(idx_sql)
@@ -108,7 +115,7 @@ class ETFDataStore:
             updated_at = datetime('now','localtime');
         """
         values = tuple(data.get(c) for c in columns)
-        with sqlite3.connect(self.db_path) as conn:
+        with self._connect() as conn:
             conn.execute(sql, values)
             conn.commit()
         return True
@@ -131,7 +138,7 @@ class ETFDataStore:
         返回: dict 或 None
         """
         sql = "SELECT shares_yi, shares_delta_yi, shares_delta_pct, share_prob FROM etf_daily WHERE code=? AND date=?"
-        with sqlite3.connect(self.db_path) as conn:
+        with self._connect() as conn:
             conn.row_factory = sqlite3.Row
             row = conn.execute(sql, (code, date)).fetchone()
             return dict(row) if row else None
@@ -149,7 +156,7 @@ class ETFDataStore:
             WHERE code=? AND date <= ? AND shares_yi IS NOT NULL
             ORDER BY date DESC LIMIT 1
         """
-        with sqlite3.connect(self.db_path) as conn:
+        with self._connect() as conn:
             conn.row_factory = sqlite3.Row
             row = conn.execute(sql, (code, before_date)).fetchone()
             return dict(row) if row else None
@@ -173,7 +180,7 @@ class ETFDataStore:
             params.append(end_date)
         sql += " ORDER BY date DESC, code ASC"
 
-        with sqlite3.connect(self.db_path) as conn:
+        with self._connect() as conn:
             conn.row_factory = sqlite3.Row
             rows = conn.execute(sql, params).fetchall()
             return [dict(r) for r in rows]
@@ -184,7 +191,7 @@ class ETFDataStore:
 
     def get_stats(self):
         """获取数据库统计信息"""
-        with sqlite3.connect(self.db_path) as conn:
+        with self._connect() as conn:
             conn.row_factory = sqlite3.Row
             stats = {}
             row = conn.execute("SELECT COUNT(*) as cnt FROM etf_daily").fetchone()
