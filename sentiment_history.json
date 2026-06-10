@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-06-09T13:30:30.842391",
-  "days": 23,
+  "generated_at": "2026-06-10T13:30:09.775547",
+  "days": 24,
   "history": [
     {
       "date": "05/08",
@@ -617,6 +617,33 @@
       "three_line": 78,
       "composite": 77,
       "label": "偏热",
+      "_src": {
+        "limitup": "akshare",
+        "index": "tencent",
+        "breadth": "default"
+      }
+    },
+    {
+      "date": "06/10",
+      "date_full": "2026-06-10",
+      "sh_chg": -0.42,
+      "sh_close": 3993.23,
+      "zt_count": 71,
+      "zb_count": 19,
+      "dt_count": 25,
+      "zb_rate": 21.1,
+      "fb_rate": 78.9,
+      "net_ratio": 2.84,
+      "up_ratio": 0.5,
+      "north_yi": 0.0,
+      "main_net_yi": 0.0,
+      "avg_turnover": 2.0,
+      "market": 45,
+      "sentiment": 64,
+      "weak": 40,
+      "three_line": 56,
+      "composite": 55,
+      "label": "震荡中性",
       "_src": {
         "limitup": "akshare",
         "index": "tencent",
