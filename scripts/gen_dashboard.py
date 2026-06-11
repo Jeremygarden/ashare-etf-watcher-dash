@@ -84,8 +84,7 @@ def generate():
                 print(f"  ⚠️  份额恢复失败: {_e}")
         else:
             print(f"  ⚠️  shares_history.json 不存在，跳过份额恢复")
-    idx_300_data   = etf.fetch("sh000300", 240)     # 复用主脚本 fetch（加前缀兼容）
-    idx_300_data   = etf.fetch("000300", 240)
+    idx_300_data   = etf.fetch("000300", 240)     # 复用主脚本 fetch（bare code; fetch() 自动加交易所前缀）
 
     etf_results = {}
     for code, info in etf.ETFS.items():
@@ -137,7 +136,20 @@ def generate():
         chg  = round((last["c"] - pc) / pc * 100, 2) if pc else 0
 
         vp = round(etf.vprob(vr), 1)
-        dp = round(etf.dprob(chg, 0, 0, vr, indices["hs300"]["chg"]), 1)
+        t5 = 0
+        t5i = 0
+        idx_chg = indices["hs300"]["chg"]
+        if len(klines) >= 6 and klines[-6]["c"]:
+            t5 = round((last["c"] - klines[-6]["c"]) / klines[-6]["c"] * 100, 2)
+        idx_300_map = {row["date"]: row for row in (idx_300_data or [])}
+        idx_last = idx_300_map.get(last["date"])
+        idx_prev = idx_300_map.get(klines[-2]["date"]) if len(klines) >= 2 else None
+        idx_t5_prev = idx_300_map.get(klines[-6]["date"]) if len(klines) >= 6 else None
+        if idx_last and idx_prev and idx_prev.get("c"):
+            idx_chg = round((idx_last["c"] - idx_prev["c"]) / idx_prev["c"] * 100, 2)
+        if idx_last and idx_t5_prev and idx_t5_prev.get("c"):
+            t5i = round((idx_last["c"] - idx_t5_prev["c"]) / idx_t5_prev["c"] * 100, 2)
+        dp = round(etf.dprob(chg, t5, t5i, vr, idx_chg), 1)
 
         # 查最近有份额数据的交易日（今日可能是非交易日）
         _share_dates = sorted(shares_history.keys())
@@ -166,8 +178,8 @@ def generate():
                 if code not in _sm: _sm[code] = {}
                 t_sh2, p_sh2, d_yi2, d_pct2 = etf.get_historical_share(code, _date, shares_history)
                 _sm[code][_date] = {"shares_yi": _entries[code].get("shares_yi"), "delta_yi": d_yi2, "delta_pct": d_pct2}
-        _hist_results = etf.analyze_all(klines, idx_300_data or [], _sm, "", 240)
-        _cp_map = {h["d"]: {"cp": h["cp"], "vp": h["vp"], "dp": h["dp"], "sp": h["sp"]} for h in _hist_results}
+        _hist_results = etf.analyze_all(klines, idx_300_data or [], _sm, code, "", 240)
+        _cp_map = {h["d"]: {"cp": h["cp"], "vp": h["vp"], "dp": h["dp"], "sp": h["sp"], "t5": h.get("t5"), "t5i": h.get("t5i")} for h in _hist_results}
 
         klines_short = []
         for k in klines[-240:]:
@@ -178,6 +190,8 @@ def generate():
             if k["date"] in _cp_map:
                 entry["cp"] = _cp_map[k["date"]]["cp"]
                 entry["vp"] = _cp_map[k["date"]]["vp"]
+                entry["dp"] = _cp_map[k["date"]]["dp"]
+                entry["sp"] = _cp_map[k["date"]]["sp"]
             klines_short.append(entry)
 
         shares_val = sh["shares_yi"] if sh else (t_sh or 0)
@@ -193,6 +207,9 @@ def generate():
             "dp":        dp,
             "sp":        sp,
             "cp":        cp,
+            "t5":        t5,
+            "t5i":       t5i,
+            "idx_chg":   idx_chg,
             "shares_yi": round(shares_val, 2) if shares_val else 0,
             "delta_yi":  round(delta_yi, 2) if delta_yi is not None else None,
             "delta_pct": round(delta_pct, 2) if delta_pct is not None else None,
