@@ -1,16 +1,25 @@
-# 轮4：对照实际数据验证量能因子计算
+# 轮5：写最终验证报告
 
-你在 `~/.etf-skill/scripts/` 工作。请只完成本轮任务，不要提前做后续轮次。
+你在 `~/.etf-skill/scripts/` 工作。请只完成本轮任务。
 
 ## 目标
-检查 `etf_v7_threefactor.py` 中量能因子（P50%）计算方式，并用 `verify_volume.py` 拉取的实际数据验证 `2026-06-10` 计算是否正确。
+生成最终报告 `VOLUME_VERIFY_REPORT.md`，总结 2026-06-10 沪深300 ETF 成交量数据、是否异常、三因子系统为何未检测到，以及是否有 bug。
 
-## 要求
-1. 明确量能因子公式：`vr = 当日成交量 / 前20个交易日均量`，`vp = vprob(vr)`，综合分里量能权重为 50%（有份额因子时）。
-2. 写一个小脚本或临时 Python 片段，复用/复制 `vprob()` 公式，对四只沪深300ETF计算 `vr` 和 `vp`。
-3. 如可行，调用 `etf_v7_threefactor.analyze_all()` 对照输出；如果因为环境/参数不便，说明原因并用等价公式验证。
-4. 新建或更新 `RALPH_ROUND4_FACTOR_CHECK.md`：
-   - 每只ETF的 `vr`、`vp`
-   - 与 `verify_volume.py` 的倍率是否一致
-   - 是否存在量能因子计算 bug
-5. 最后输出 `COMPLETE`。
+## 输入材料
+- `RALPH_ROUND1_NOTES.md`
+- `verify_volume.py`
+- `volume_verify_2026-06-10.txt`
+- `RALPH_ROUND3_ANALYSIS.md`
+- `RALPH_ROUND4_FACTOR_CHECK.md`
+- `etf_v7_threefactor.py`
+
+## 报告必须包含
+1. 执行摘要。
+2. 数据源与口径：腾讯财经 K 线成交量字段；系统没有用 akshare；份额来自东方财富但本报告重点是成交量。
+3. 四只沪深300ETF 2026-06-10 成交量表格：成交量、前20日倍率、60日窗口倍率、`vp`。
+4. 异常性判定：是否放量，阈值说明。
+5. 三因子系统未检测到的原因。
+6. bug 结论：量能因子是否有计算 bug；如有文案/口径风险也说明。
+7. 后续建议：若用户仍认为异常，应核对成交额/实时盘口/其他ETF范围/不同数据源。
+
+最后输出 `COMPLETE`。
