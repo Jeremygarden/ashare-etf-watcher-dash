@@ -1129,9 +1129,17 @@ def fetch_sector_flow(top_n=10):
             d = json.loads(r.read().decode("utf-8"))
         items = d.get("data", {}).get("diff", []) or []
         result = []
+        def _num(value, default=0.0):
+            try:
+                if value in (None, "", "-"):
+                    return default
+                return float(value)
+            except (TypeError, ValueError):
+                return default
+
         for item in items:
-            flow = item.get("f62", 0) or 0
-            chg = item.get("f3", 0) or 0
+            flow = _num(item.get("f62"))
+            chg = _num(item.get("f3"))
             name = item.get("f14", "")
             result.append({"name": name, "flow_yi": round(flow / 1e8, 2), "chg_pct": round(chg, 2)})
         result.sort(key=lambda x: x["flow_yi"], reverse=True)
