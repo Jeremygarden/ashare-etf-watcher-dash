@@ -322,7 +322,7 @@ html,body{overflow-x:hidden;max-width:100vw}
     <div class="live-dot" id="liveDot"></div>
     <button class="refresh-btn" id="refreshBtn" onclick="refreshData()">
       <span class="refresh-icon">🔄</span>
-      <span class="refresh-text">刷新数据</span>
+      <span class="refresh-text">刷新行情</span>
     </button>
     <span style="font-size:11px;color:var(--sub)">实时</span>
     <div class="theme-toggle" id="themeToggle" title="切换主题">
@@ -359,12 +359,12 @@ html,body{overflow-x:hidden;max-width:100vw}
   </div>
   <div class="kpi-card red">
     <div class="kpi-label">高确信 ETF</div>
-    <div class="kpi-val red" id="kpiHigh">--<span style="font-size:14px;color:var(--sub)"> / 7</span></div>
+    <div class="kpi-val red" id="kpiHigh">--<span style="font-size:14px;color:var(--sub)"> / 9</span></div>
     <div class="kpi-sub" id="kpiHighDesc">暂无高确信ETF</div>
   </div>
   <div class="kpi-card yellow">
     <div class="kpi-label">中确信 ETF</div>
-    <div class="kpi-val yellow" id="kpiMid">--<span style="font-size:14px;color:var(--sub)"> / 7</span></div>
+    <div class="kpi-val yellow" id="kpiMid">--<span style="font-size:14px;color:var(--sub)"> / 9</span></div>
     <div class="kpi-sub">观察关注</div>
   </div>
   <div class="kpi-card blue">
@@ -870,12 +870,12 @@ function renderKPI(){
   else{badge.textContent="⚪ 无信号";badge.className="kpi-badge badge-none";}
 
   document.getElementById("kpiHigh").innerHTML =
-    `${highList.length}<span style="font-size:14px;color:var(--sub)"> / 7</span>`;
+    `${highList.length}<span style="font-size:14px;color:var(--sub)"> / ${Object.keys(ETFS_META).length}</span>`;
   document.getElementById("kpiHighDesc").textContent =
     highList.length ? highList.map(c=>ETFS_META[c]?.name||c).join("、") : "暂无高确信ETF";
 
   document.getElementById("kpiMid").innerHTML =
-    `${midList.length}<span style="font-size:14px;color:var(--sub)"> / 7</span>`;
+    `${midList.length}<span style="font-size:14px;color:var(--sub)"> / ${Object.keys(ETFS_META).length}</span>`;
 
   document.getElementById("kpiShareCov").innerHTML =
     `${shCov}<span style="font-size:14px;color:var(--sub)"> / 9</span>`;
@@ -1485,7 +1485,8 @@ function renderMatrix(){
   codes.forEach(code => {
     (etfs[code]?.klines || []).forEach(k => { if (k.cp != null) dateSet.add(k.date); });
   });
-  const allDates = [...dateSet].sort().slice(-20);  // 最近20个有数据的交易日
+  const latestDate = Object.values(etfs).map(d => d?.date).filter(Boolean).sort().slice(-1)[0] || '';
+  const allDates = [...dateSet].filter(d => d !== latestDate).sort().slice(-20);  // 最近20个有数据的交易日（不重复今日）
 
   const thead = document.getElementById("matrixHead");
   const tbody = document.getElementById("matrixBody");
@@ -1544,9 +1545,10 @@ function selectEtf(code){
 // ══ 更新时间 ══
 function updateTime(){
   const now = new Date();
-  const hh = String(now.getUTCHours()+8).padStart(2,"0");
-  const mm = String(now.getUTCMinutes()).padStart(2,"0");
-  document.getElementById("updateTime").textContent = `${now.getMonth()+1}/${now.getDate()} ${hh}:${mm} 更新`;
+  const cn = new Date(now.getTime() + 8 * 60 * 60 * 1000);
+  const hh = String(cn.getUTCHours()).padStart(2,"0");
+  const mm = String(cn.getUTCMinutes()).padStart(2,"0");
+  document.getElementById("updateTime").textContent = `${cn.getUTCMonth()+1}/${cn.getUTCDate()} ${hh}:${mm} 更新`;
 }
 
 function showToast(message){
@@ -1564,7 +1566,7 @@ function setRefreshLoading(loading){
   const textEl = btn.querySelector(".refresh-text");
   btn.disabled = loading;
   btn.classList.toggle("loading", loading);
-  if(textEl){ textEl.textContent = loading ? "加载中..." : "刷新数据"; }
+  if(textEl){ textEl.textContent = loading ? "加载行情..." : "刷新行情"; }
 }
 
 // ══ 实时数据刷新（盘中直接调用东财API，不重载页面）══
@@ -1667,12 +1669,16 @@ async function refreshData(){
     const textEl = btn ? btn.querySelector('.refresh-text') : null;
     if(textEl) {
       textEl.textContent = `已刷新 ${timeStr}`;
-      setTimeout(() => { textEl.textContent = '刷新数据'; }, 4000);
+      setTimeout(() => { textEl.textContent = '刷新行情'; }, 4000);
     }
     setRefreshLoading(false);
   } catch(e) {
     console.warn('[刷新] 实时API失败，降级为页面重载:', e.message);
-    window.location.href = window.location.pathname + '?t=' + Date.now();
+    showToast('实时行情刷新失败，正在重新加载页面...');
+    setRefreshLoading(false);
+    setTimeout(() => {
+      window.location.href = window.location.pathname + '?t=' + Date.now();
+    }, 300);
   }
 }
 
@@ -1687,19 +1693,21 @@ function renderSectorFlow(){
   function makeRow(item, isIn){
     const color = isIn ? 'var(--red)' : 'var(--green)';
     const sign  = isIn ? '+' : '';
-    const pct   = item.chg_pct || 0;
+    const flowVal = Number(item.flow_yi || 0);
+    const pct   = Number(item.chg_pct || 0);
     const pctColor = pct > 0 ? 'var(--red)' : pct < 0 ? 'var(--green)' : 'var(--sub)';
     return `<div style="display:flex;align-items:center;padding:5px 16px;gap:8px;border-bottom:1px solid var(--soft-2)">
       <div style="font-size:12px;font-weight:600;flex:1;color:var(--text)">${item.name}</div>
       <div style="font-size:11px;color:${pctColor};min-width:46px;text-align:right">${pct>0?'+':''}${pct.toFixed(2)}%</div>
-      <div style="font-size:12px;font-weight:700;color:${color};min-width:60px;text-align:right">${sign}${item.flow_yi.toFixed(2)}亿</div>
+      <div style="font-size:12px;font-weight:700;color:${color};min-width:60px;text-align:right">${sign}${flowVal.toFixed(2)}亿</div>
     </div>`;
   }
 
   const inEl  = document.getElementById('sectorInList');
   const outEl = document.getElementById('sectorOutList');
-  if(inEl)  inEl.innerHTML  = (sf.top_in  || []).map(x => makeRow(x, true)).join('') || '<div style="padding:20px;text-align:center;color:var(--sub);font-size:12px">数据加载中...</div>';
-  if(outEl) outEl.innerHTML = (sf.top_out || []).map(x => makeRow(x, false)).join('') || '<div style="padding:20px;text-align:center;color:var(--sub);font-size:12px">数据加载中...</div>';
+  const emptyText = sf.updated === '--' ? '板块资金接口暂无数据' : '暂无板块资金数据';
+  if(inEl)  inEl.innerHTML  = (sf.top_in  || []).map(x => makeRow(x, true)).join('') || `<div style="padding:20px;text-align:center;color:var(--sub);font-size:12px">${emptyText}</div>`;
+  if(outEl) outEl.innerHTML = (sf.top_out || []).map(x => makeRow(x, false)).join('') || `<div style="padding:20px;text-align:center;color:var(--sub);font-size:12px">${emptyText}</div>`;
 }
 
 // ══ 南北向资金渲染 ══
